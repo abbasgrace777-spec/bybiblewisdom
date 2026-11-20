@@ -1,0 +1,16 @@
+{
+  "name": "bybiblewisdom-studio",
+  "version": "1.0.0",
+  "description": "AI-Powered YouTube Automation Studio for ByBibleWisdom",
+  "private": true,
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "test": "node backend/test_units.js",
+    "seed": "node backend/src/db/seeds/index.js",
+    "build:frontend": "cd frontend && npm run build",
+    "dev:backend": "cd backend && node src/server.js",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "author": "ByBibleWisdom",
+  "license": "UNLICENSED"
+}

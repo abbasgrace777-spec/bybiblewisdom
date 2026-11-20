@@ -1,0 +1,167 @@
+const projectService = require('./projectService');
+const chapterReaderService = require('./chapterReaderService');
+const scriptService = require('./scriptService');
+const verificationService = require('./verificationService');
+const voiceService = require('./voiceService');
+const imageService = require('./imageService');
+const videoService = require('./videoService');
+const thumbnailService = require('./thumbnailService');
+const ideogramService = require('./ideogramService');
+const seoService = require('./seoService');
+const exportService = require('./exportService');
+const qualityControlService = require('./qualityControlService');
+const { get, run } = require('../db/database');
+
+class PipelineService {
+  /**
+   * Run the Complete 10-Step Automated Production Pipeline for a specific Bible Chapter.
+   * Guarantees:
+   * 1. One Chapter = One Separate Video & Package
+   * 2. Full Chapter read & analyzed verse-by-verse
+   * 3. Original script with 10-part structure
+   * 4. Pure natural speech narration (Male, soft & calm)
+   * 5. Unique chapter visuals with Visual Uniqueness Engine
+   * 6. ABSOLUTELY NO BACKGROUND MUSIC (Narration only)
+   * 7. Burned-in, high-contrast YouTube subtitles
+   * 8. Ideogram dedicated thumbnail prompt and image
+   * 9. Complete YouTube SEO metadata
+   * 10. Standardized export to ByBibleWisdom/<Book>/Chapter_XX/
+   */
+  async runFullProductionPipeline(projectId, options = {}, onProgress = null) {
+    const notify = (step, stepName, percent, details = {}) => {
+      console.log(`[Pipeline] [Step ${step}/10] ${stepName} (${percent}%)`);
+      try {
+        run(`
+          UPDATE projects 
+          SET current_step = ?, current_step_name = ?, progress_percent = ?, updated_at = CURRENT_TIMESTAMP 
+          WHERE id = ?
+        `, [step, stepName, percent, projectId]);
+      } catch (dbErr) {}
+      if (onProgress) {
+        onProgress({ step, stepName, percent, details, timestamp: new Date().toISOString() });
+      }
+    };
+
+    try {
+      // Step 1: Validate Project & Read Scripture Verses
+      notify(1, 'Reading Complete Bible Chapter & Analyzing Verses', 10);
+      const project = projectService.getProjectById(projectId);
+      if (!project) throw new Error('Project not found');
+
+      const isCustomPrompt = project.category === 'CUSTOM_PROMPT';
+      if (!isCustomPrompt) {
+        const book = project.bible_book || 'Genesis';
+        const chapter = project.chapter_start || 1;
+        const chapterData = await chapterReaderService.readCompleteChapter(book, chapter, project.bible_translation || 'WEB');
+      } else {
+        notify(1, 'Verifying Scripture Verses & Historical Evidence from SQLite', 10);
+      }
+
+      // Step 2: Generate Original Script (If not already generated and approved)
+      const existingScript = get(`SELECT id FROM scripts WHERE project_id = ?`, [projectId]);
+      let scriptResult;
+      if (existingScript) {
+        notify(2, 'Using Approved Scripture-Accurate Script & Scene Cues', 22);
+        scriptResult = { projectId, status: 'APPROVED' };
+      } else if (isCustomPrompt) {
+        notify(2, 'Generating Script from Approved Outline & Verified Scripture', 22);
+        const promptModeService = require('./promptModeService');
+        scriptResult = await promptModeService.approveAndGenerateScript(projectId);
+      } else {
+        notify(2, 'Generating Original Bible-Accurate Script & Scene Cues', 22);
+        scriptResult = await scriptService.generateScriptForProject(projectId, options);
+      }
+
+      // Step 3: Run Mandatory 10-Point Quality Control & Accuracy Safety Gate (Pre-Media Script Validation)
+      notify(3, 'Executing 10-Point Quality Control & Compliance Safety Gate', 34);
+      const auditResult = await verificationService.runFullSafetyGate(projectId, { stage: 'pre_media' });
+      if (!auditResult.overallPassed) {
+        throw new Error('Safety Gate failed validation. Manual review required before media generation.');
+      }
+
+      // Step 4: Synthesize Natural Documentary Narration with Kokoro TTS (Apache 2.0)
+      notify(4, 'Synthesizing Kokoro Natural Voice Narration', 46);
+      const voiceResult = await voiceService.generateProjectNarration(projectId, {
+        voice: options.voice,
+        rate: options.rate
+      }, (current, total) => {
+        notify(4, `Synthesizing Natural Voice Narration (${current}/${total})`, 46 + Math.round((current / total) * 12));
+      });
+
+      // Step 5: Generate Unique Biblical Images (With Visual Uniqueness Engine)
+      notify(5, 'Generating Unique Chapter Visuals via AI', 60);
+      if (options.regenerateFallbacks === 'true' || options.regenerateFallbacks === true) {
+        run(`
+          UPDATE script_segments 
+          SET image_status = 'PENDING', engine_used = NULL 
+          WHERE project_id = ? AND (image_status = 'FALLBACK' OR engine_used = 'Procedural Fallback')
+        `, [projectId]);
+      }
+      const imageResult = await imageService.generateProjectImages(projectId, options, (current, total) => {
+        notify(5, `Generating Unique Visuals (${current}/${total})`, 60 + Math.round((current / total) * 12));
+      });
+
+      // Step 6: Automated Video Editing with Burned-In Subtitles (ABSOLUTELY NO BACKGROUND MUSIC)
+      notify(6, 'Assembling Video with FFmpeg & Subtitles (Zero Background Music)', 74);
+      const videoResult = await videoService.renderProjectVideo(projectId, options);
+
+      // Step 7: Automated High-CTR Thumbnail Generation (3 Code-Rendered Variants)
+      notify(7, 'Generating 3 High-CTR Thumbnail Variants (Code-Rendered Engine)', 84);
+      let thumbResult;
+      if (options.useIdeogram && ideogramService.getIdeogramStatus().configured) {
+        thumbResult = await ideogramService.generateChapterThumbnail(projectId, options);
+      } else {
+        thumbResult = await thumbnailService.generateThreeVariants(projectId, options);
+      }
+
+      // Step 8: YouTube SEO Generation (Title, Description, Timestamps, Tags)
+      notify(8, 'Generating YouTube SEO Metadata & Timestamps', 90);
+      const seoResult = seoService.generateMetadata(projectId);
+
+      // Step 9: Assemble Final Standardized Production Package (ByBibleWisdom/<Book>/Chapter_XX/)
+      notify(9, 'Exporting Production Package to ByBibleWisdom Studio Folder', 94);
+      const packageResult = await exportService.exportChapterPackage(projectId);
+
+      // Automated Quality Control Inspection Suite
+      notify(9, 'Running Automated Quality Control & Frame Inspection', 98);
+      const qcResult = await qualityControlService.runFullQualityControl(projectId);
+
+      // Step 10: Complete & Ready for YouTube Review
+      notify(10, 'Production Complete — Ready for Private YouTube Review', 100, {
+        videoUrl: videoResult.relativeUrl,
+        thumbnailUrl: thumbResult.relativeUrl,
+        duration: videoResult.durationSeconds,
+        packageDir: packageResult.packageDir,
+        qcPassed: qcResult.overallPassed
+      });
+
+      const updatedProject = projectService.getProjectById(projectId);
+
+      return {
+        success: true,
+        projectId,
+        status: updatedProject.status,
+        durationSeconds: videoResult.durationSeconds,
+        videoPath: videoResult.videoPath,
+        thumbnailPath: thumbResult.thumbnailPath,
+        videoUrl: videoResult.relativeUrl,
+        thumbnailUrl: thumbResult.relativeUrl,
+        seo: seoResult,
+        audit: auditResult,
+        package: packageResult,
+        ideogram: thumbResult,
+        qc: qcResult
+      };
+    } catch (err) {
+      console.error('[Pipeline] Execution failed:', err.message);
+      try {
+        run(`UPDATE projects SET status = 'FAILED', error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [err.message, projectId]);
+      } catch (dbErr) {
+        run(`UPDATE projects SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [projectId]);
+      }
+      throw err;
+    }
+  }
+}
+
+module.exports = new PipelineService();

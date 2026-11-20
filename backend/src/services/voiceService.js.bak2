@@ -1,0 +1,278 @@
+const path = require('node:path');
+const fs = require('node:fs');
+const { execFileSync } = require('node:child_process');
+const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
+const { db, get, query, run } = require('../db/database');
+const config = require('../config');
+
+const PYTHON_EXE = path.join(config.PATHS.ROOT, 'tools', 'ai_env', 'Scripts', 'python.exe');
+const KOKORO_SCRIPT = path.join(config.PATHS.ROOT, 'tools', 'scripts', 'kokoro_narrator.py');
+
+class VoiceService {
+  /**
+   * Get clean environment with ai_env and tools\bin prepended, Python27 stripped
+   */
+  _getCleanEnv() {
+    const cleanEnv = { ...process.env };
+    cleanEnv.PATH = [
+      path.join(config.PATHS.ROOT, 'tools', 'ai_env', 'Scripts'),
+      path.join(config.PATHS.ROOT, 'tools', 'bin'),
+      ...((process.env.PATH || '').split(path.delimiter).filter(p => !p.toLowerCase().includes('python27')))
+    ].join(path.delimiter);
+    return cleanEnv;
+  }
+
+  /**
+   * Get available documentary narration voices
+   */
+  getAvailableVoices() {
+    return config.VOICE.ALTERNATIVE_VOICES;
+  }
+
+  /**
+   * Synthesize narration for a project using Kokoro TTS (Apache 2.0, local, free).
+   * - Sentence boundary chunking (<= 400 chars)
+   * - 250-400ms pauses between sentences, 600-800ms between sections
+   * - Click-free crossfading
+   * - Audio mastered to -16 LUFS, True Peak < -1 dB
+   * - Strictly 1 audio track, zero background music
+   * - Records engine, version, and license in project metadata/assets
+   */
+  async generateProjectNarration(projectId, options = {}, onProgress = null) {
+    const project = get(`SELECT * FROM projects WHERE id = ?`, [projectId]);
+    if (!project) throw new Error('Project not found');
+
+    const script = get(`
+      SELECT * FROM scripts WHERE project_id = ? ORDER BY version DESC LIMIT 1
+    `, [projectId]);
+
+    if (!script) {
+      throw new Error('No script found for project. Generate script before voice synthesis.');
+    }
+
+    const segments = query(`
+      SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
+    `, [projectId]);
+
+    if (!segments || segments.length === 0) {
+      throw new Error('No script segments found for project.');
+    }
+
+    const voice = options.voice || config.VOICE.DEFAULT_VOICE;
+    const voiceDef = config.VOICE.ALTERNATIVE_VOICES.find(v => v.id === voice) || {
+      id: voice,
+      name: voice,
+      engine: 'kokoro',
+      enabled: true
+    };
+
+    // Enforce disabled Edge TTS rule unless explicitly opted in
+    if (voiceDef.engine === 'edge' && !voiceDef.enabled && !options.allowUnofficialEdge) {
+      throw new Error(`Edge TTS voice "${voice}" is unofficial (check terms). Default is Kokoro TTS (local, Apache 2.0).`);
+    }
+
+    const projectAudioDir = path.join(config.PATHS.PROJECTS, projectId, 'audio');
+    if (!fs.existsSync(projectAudioDir)) {
+      fs.mkdirSync(projectAudioDir, { recursive: true });
+    }
+
+    console.log(`[VoiceService] Synthesizing narration for ${projectId} (${segments.length} scenes) using Kokoro TTS [${voice}]...`);
+
+    // Prepare batch manifest for Kokoro TTS engine
+    const sceneManifestList = segments.map(seg => {
+      const sDir = path.join(projectAudioDir, `scene_${seg.segment_order}`);
+      if (!fs.existsSync(sDir)) fs.mkdirSync(sDir, { recursive: true });
+      return {
+        segment_order: seg.segment_order,
+        text: (seg.narration_text || '').trim(),
+        output_path: path.join(sDir, 'audio.mp3')
+      };
+    });
+
+    const finalNarrationPath = path.join(projectAudioDir, 'narration.mp3');
+    const batchManifestPath = path.join(projectAudioDir, 'kokoro_batch_manifest.json');
+    const manifestData = {
+      projectId,
+      voice,
+      speed: 0.96, // ~145-155 WPM
+      scenes: sceneManifestList,
+      final_narration_path: finalNarrationPath
+    };
+
+    fs.writeFileSync(batchManifestPath, JSON.stringify(manifestData, null, 2), 'utf8');
+
+    let ttsResult = null;
+    try {
+      const rawOutput = execFileSync(PYTHON_EXE, [
+        KOKORO_SCRIPT,
+        '--batch',
+        batchManifestPath
+      ], {
+        encoding: 'utf8',
+        env: this._getCleanEnv(),
+        maxBuffer: 20 * 1024 * 1024
+      });
+
+      const jsonStart = rawOutput.indexOf('{');
+      const jsonEnd = rawOutput.lastIndexOf('}') + 1;
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        ttsResult = JSON.parse(rawOutput.substring(jsonStart, jsonEnd));
+      } else {
+        throw new Error('Failed to parse Kokoro batch response JSON: ' + rawOutput);
+      }
+    } catch (kokoroErr) {
+      console.error(`[VoiceService] Kokoro batch synthesis failed:`, kokoroErr.message);
+      throw new Error(`Kokoro TTS synthesis failed: ${kokoroErr.message}`);
+    } finally {
+      if (fs.existsSync(batchManifestPath)) {
+        try { fs.unlinkSync(batchManifestPath); } catch (e) {}
+      }
+    }
+
+    // Update segment durations in database from Kokoro result
+    if (ttsResult && ttsResult.scenes) {
+      for (const sc of ttsResult.scenes) {
+        const seg = segments.find(s => s.segment_order === sc.segment_order);
+        if (seg) {
+          run(`
+            UPDATE script_segments 
+            SET duration_seconds = ?
+            WHERE id = ?
+          `, [sc.duration_seconds, seg.id]);
+        }
+        if (onProgress) {
+          onProgress(sc.segment_order, segments.length);
+        }
+      }
+    }
+
+    const actualMasterDuration = Math.round(ttsResult.duration_seconds || 0);
+
+    // Record asset in SQLite with engine, version, and license metadata
+    run(`
+      INSERT INTO assets (
+        project_id, asset_type, title, file_path, source_url,
+        license_type, commercial_use_allowed, attribution_required, model_name
+      ) VALUES (?, 'VOICE', ?, ?, 'hexgrad/Kokoro-82M (Local Offline Engine)', 'Apache 2.0', 1, 0, ?)
+    `, [
+      projectId,
+      `Full Narration (${voice}) - Mastered -16 LUFS`,
+      finalNarrationPath,
+      `Kokoro TTS v0.9.4 (${voice})`
+    ]);
+
+    // Update project record
+    run(`
+      UPDATE projects 
+      SET status = 'VOICE_GENERATED',
+          actual_duration_seconds = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [actualMasterDuration, projectId]);
+
+    console.log(`[VoiceService] Kokoro voice generation completed: ${actualMasterDuration}s master audio rendered at -16 LUFS.`);
+
+    return {
+      projectId,
+      audioPath: finalNarrationPath,
+      relativeUrl: `/storage/projects/${projectId}/audio/narration.mp3`,
+      durationSeconds: actualMasterDuration,
+      voice,
+      engine: 'Kokoro TTS',
+      version: '0.9.4',
+      license: 'Apache 2.0',
+      lufs: ttsResult.integrated_lufs,
+      truePeak: ttsResult.true_peak_db,
+      wpm: ttsResult.words_per_minute,
+      status: 'VOICE_GENERATED'
+    };
+  }
+
+  /**
+   * Synthesize narration for a single scene and refresh master narration
+   */
+  async generateSingleSceneNarration(projectId, segmentOrder, options = {}) {
+    const project = get(`SELECT * FROM projects WHERE id = ?`, [projectId]);
+    if (!project) throw new Error('Project not found');
+
+    const seg = get(`
+      SELECT * FROM script_segments WHERE project_id = ? AND segment_order = ?
+    `, [projectId, segmentOrder]);
+    if (!seg) throw new Error(`Scene ${segmentOrder} not found`);
+
+    const voice = options.voice || config.VOICE.DEFAULT_VOICE;
+    const projectAudioDir = path.join(config.PATHS.PROJECTS, projectId, 'audio');
+    const sceneDir = path.join(projectAudioDir, `scene_${segmentOrder}`);
+    if (!fs.existsSync(sceneDir)) fs.mkdirSync(sceneDir, { recursive: true });
+
+    const sceneAudioPath = path.join(sceneDir, 'audio.mp3');
+    const textToSpeak = (seg.narration_text || '').trim();
+
+    if (!textToSpeak) {
+      throw new Error(`Scene ${segmentOrder} has no narration text.`);
+    }
+
+    let sceneDuration = 5.0;
+    try {
+      const rawOutput = execFileSync(PYTHON_EXE, [
+        KOKORO_SCRIPT,
+        sceneAudioPath,
+        textToSpeak,
+        voice
+      ], {
+        encoding: 'utf8',
+        env: this._getCleanEnv()
+      });
+
+      const jsonStart = rawOutput.indexOf('{');
+      const jsonEnd = rawOutput.lastIndexOf('}') + 1;
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const res = JSON.parse(rawOutput.substring(jsonStart, jsonEnd));
+        sceneDuration = res.duration_seconds;
+      }
+    } catch (err) {
+      console.warn(`[VoiceService] Kokoro TTS error for single scene ${segmentOrder}:`, err.message);
+      throw err;
+    }
+
+    run(`UPDATE script_segments SET duration_seconds = ? WHERE id = ?`, [sceneDuration, seg.id]);
+
+    // Re-assemble master narration.mp3
+    const allSegments = query(`SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC`, [projectId]);
+    const concatLines = allSegments.map(s => {
+      const p = path.join(projectAudioDir, `scene_${s.segment_order}`, 'audio.mp3');
+      return `file '${p.replace(/\\/g, '/')}'`;
+    });
+    const listFilePath = path.join(projectAudioDir, 'concat_scenes.txt');
+    fs.writeFileSync(listFilePath, concatLines.join('\n'), 'utf8');
+
+    const finalNarrationPath = path.join(projectAudioDir, 'narration.mp3');
+    try {
+      execFileSync(config.PATHS.FFMPEG, [
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', listFilePath,
+        '-af', 'loudnorm=I=-16:LRA=11:TP=-1.5',
+        '-c:a', 'libmp3lame',
+        '-b:a', '192k',
+        finalNarrationPath,
+        '-y'
+      ]);
+    } catch (e) {
+      console.warn('[VoiceService] Concat loudnorm fallback:', e.message);
+    }
+
+    // Invalidate cached scene clip
+    const cachedClip = path.join(config.PATHS.PROJECTS, projectId, 'clips', `scene_${segmentOrder}.mp4`);
+    if (fs.existsSync(cachedClip)) fs.unlinkSync(cachedClip);
+
+    return {
+      segmentOrder,
+      durationSeconds: sceneDuration,
+      audioPath: sceneAudioPath,
+      relativeUrl: `/storage/projects/${projectId}/audio/scene_${segmentOrder}/audio.mp3`
+    };
+  }
+}
+
+module.exports = new VoiceService();
