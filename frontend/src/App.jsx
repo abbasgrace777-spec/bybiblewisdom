@@ -72,13 +72,16 @@ export default function App() {
   }
 
   async function handleCreateProject(projectData) {
-    const res = await api.createProject(projectData);
-    if (res.success && res.data) {
-      await loadAllData();
-      setActiveProjectId(res.data.id);
-      setProductionProject(res.data);
-      setIsOneClickModalOpen(true);
+    let project = projectData;
+    if (!projectData.id) {
+      const res = await api.createProject(projectData);
+      if (!res.success || !res.data) return;
+      project = res.data;
     }
+    await loadAllData();
+    setActiveProjectId(project.id);
+    setProductionProject(project);
+    setIsOneClickModalOpen(true);
   }
 
   function handleStartProjectForBook(book) {
