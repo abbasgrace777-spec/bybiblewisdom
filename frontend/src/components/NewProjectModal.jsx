@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Smartphone, Monitor, BookOpen, Sparkles, Check, HelpCircle, Layers, FileText, ShieldAlert, Play } from 'lucide-react';
+import { X, Smartphone, Monitor, BookOpen, Sparkles, Check, HelpCircle, Layers, FileText, ShieldAlert, Play, Clock } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bibleBooks = [] }) {
