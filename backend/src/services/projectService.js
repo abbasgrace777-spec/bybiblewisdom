@@ -168,21 +168,26 @@ class ProjectService {
 
     const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'SLOW_DRIFT', 'PAN_UP'];
 
-    // Insert into scripts
+    // Insert into scripts (fully parameterized to prevent any SQL quote escaping issues)
     run(`
       INSERT INTO scripts (
         project_id, version, hook, biblical_context, core_narrative,
         theological_insight, practical_application, call_to_action,
         full_narration_text, word_count, estimated_read_time_seconds,
         is_approved, model_used
-      ) VALUES (?, 1, ?, 'Direct Sacred Narration & Prayer', ?, 'Sacred healing, trust, and divine peace.', 'Live in God\'s presence with faith.', 'Subscribe to ByBibleWisdom.', ?, ?, ?, 1, 'User Custom Narration')
+      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `, [
       projectId,
       scenes[0]?.slice(0, 80) || 'Opening Sacred Prayer',
+      'Direct Sacred Narration & Prayer',
       cleanNarration,
+      'Sacred healing, trust, and divine peace.',
+      'Live in God presence with faith and trust.',
+      'Subscribe to ByBibleWisdom for daily sacred prayers.',
       cleanNarration,
       wordCount,
-      estDuration
+      estDuration,
+      'User Custom Narration'
     ]);
 
     // Insert into script_segments
@@ -342,21 +347,26 @@ class ProjectService {
 
     const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'SLOW_DRIFT', 'PAN_UP'];
 
-    // Insert into scripts
+    // Insert into scripts (fully parameterized to prevent any SQL quote escaping issues)
     run(`
       INSERT INTO scripts (
         project_id, version, hook, biblical_context, core_narrative,
         theological_insight, practical_application, call_to_action,
         full_narration_text, word_count, estimated_read_time_seconds,
         is_approved, model_used
-      ) VALUES (?, 1, ?, 'Direct Sacred Narration & Prayer', ?, 'Sacred healing, trust, and divine peace.', 'Live in God\'s presence with faith.', 'Subscribe to ByBibleWisdom.', ?, ?, ?, 1, 'User Custom Narration')
+      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `, [
       projectId,
       scenes[0]?.slice(0, 80) || 'Opening Sacred Prayer',
+      'Direct Sacred Narration & Prayer',
       cleanNarration,
+      'Sacred healing, trust, and divine peace.',
+      'Live in God presence with faith and trust.',
+      'Subscribe to ByBibleWisdom for daily sacred prayers.',
       cleanNarration,
       wordCount,
-      estDuration
+      estDuration,
+      'User Custom Narration'
     ]);
 
     // Insert into script_segments
