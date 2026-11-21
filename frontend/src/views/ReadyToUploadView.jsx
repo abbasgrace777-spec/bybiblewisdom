@@ -250,6 +250,9 @@ export default function ReadyToUploadView({ setActiveTab }) {
                   <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
                     <Video className="w-4 h-4 text-amber-400" />
                     <span>Final_Video.mp4</span>
+                    <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                      {selectedProject?.format === 'SHORTS' ? 'Shorts (9:16)' : 'Full (16:9)'}
+                    </span>
                   </div>
                   <span className="text-[11px] font-semibold text-slate-400">
                     {packageData.video?.sizeFormatted}
@@ -258,7 +261,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
 
                 {packageData.video?.available ? (
                   <div className="space-y-3">
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 relative shadow-lg">
+                    <div className={selectedProject?.format === 'SHORTS' ? "w-full max-w-[280px] sm:max-w-[300px] mx-auto aspect-[9/16] bg-black rounded-2xl overflow-hidden border border-slate-800 relative shadow-2xl" : "aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 relative shadow-lg"}>
                       <video
                         controls
                         className="w-full h-full object-contain"

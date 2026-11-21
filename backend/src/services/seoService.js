@@ -237,23 +237,61 @@ class SeoService {
     const titleOptions = this.generateTitleOptions(project);
     const chosenTitle = titleOptions[0].title;
 
-    // 2. Query exact Scripture verse from database
-    const verseRow = get(`
-      SELECT verse, verse_text FROM scripture_verses
-      WHERE book_name = ? AND chapter = ? AND translation = 'WEB' AND verse = 1
-    `, [project.bible_book || 'Genesis', ch]);
+    const isPrayerOrCustom = project.category === 'PRAYER_AND_DEVOTIONAL' || 
+                             project.category === 'CUSTOM_SCRIPT' || 
+                             !project.bible_book;
 
-    const keyVerseText = verseRow ? verseRow.verse_text : (book ? book.key_verse_text : 'In the beginning, God created the heavens and the earth.');
-    const keyVerseRef = `${project.bible_book || 'Genesis'} ${ch}:${verseRow ? verseRow.verse : 1}`;
+    let description = '';
+    let tags = '';
 
-    // 3. Timestamps from real subtitle timing or audio durations
-    const segments = query(`
-      SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
-    `, [projectId]);
-    const timestamps = this.getRealTimestamps(projectId, segments);
+    if (isPrayerOrCustom) {
+      description = `${chosenTitle}
 
-    // 4. Full YouTube Description with Timestamps & Compliance Notice
-    const description = `${chosenTitle}
+A reverent Christian prayer offering peace, bodily healing, and comforting rest in the presence of Jesus Christ.
+
+📖 SCRIPTURE REFERENCE:
+"Come to me, all you who labor and are heavily burdened, and I will give you rest."
+— Matthew 11:28 (World English Bible, Public Domain)
+
+🕊️ PRAYER TAKEAWAY:
+Place every burden and fear into God's loving hands tonight. Sleep peacefully in the grace of our Lord Jesus Christ.
+
+⚖️ COMPLIANCE & ATTRIBUTION NOTICE:
+Narration audio and authentic visual artwork produced for prayer and devotional worship. Scripture references taken from public domain translations.
+
+#Jesus #ChristianPrayer #HealingPrayer #NightPrayer #Peace #Faith #Bible`;
+
+      tags = [
+        'Jesus',
+        'Healing Prayer',
+        'Christian Prayer',
+        'Night Prayer',
+        'Bedtime Prayer',
+        'Prayer for Healing',
+        'Peace of God',
+        'Jesus Christ',
+        'Daily Devotional',
+        'Faith in God',
+        'Christian Motivation'
+      ].join(', ');
+    } else {
+      // 2. Query exact Scripture verse from database
+      const verseRow = get(`
+        SELECT verse, verse_text FROM scripture_verses
+        WHERE book_name = ? AND chapter = ? AND translation = 'WEB' AND verse = 1
+      `, [project.bible_book || 'Genesis', ch]);
+
+      const keyVerseText = verseRow ? verseRow.verse_text : (book ? book.key_verse_text : 'In the beginning, God created the heavens and the earth.');
+      const keyVerseRef = `${project.bible_book || 'Genesis'} ${ch}:${verseRow ? verseRow.verse : 1}`;
+
+      // 3. Timestamps from real subtitle timing or audio durations
+      const segments = query(`
+        SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
+      `, [projectId]);
+      const timestamps = this.getRealTimestamps(projectId, segments);
+
+      // 4. Full YouTube Description with Timestamps & Compliance Notice
+      description = `${chosenTitle}
 
 In this reverent chapter study from ByBibleWisdom, we walk through the sacred text of ${project.bible_book || 'Genesis'} Chapter ${ch}. Uncover the ancient Near Eastern historical background, original Hebrew linguistic insights, and the eternal spiritual truth of God's Word.
 
@@ -275,20 +313,21 @@ Notice: Narration and visual artwork in this educational video are AI-generated.
 
 #ByBibleWisdom #BibleStudy #ChristianEducation #${project.bible_book || 'Genesis'} #Faith #Scripture`;
 
-    // 5. Optimized Tags (under 500 characters)
-    const tags = [
-      project.bible_book || 'Genesis',
-      `${project.bible_book || 'Genesis'} ${ch}`,
-      `${project.bible_book || 'Genesis'} Chapter ${ch}`,
-      'ByBibleWisdom',
-      'Bible study',
-      'Christian motivation',
-      'Old Testament',
-      'Creation of the World',
-      'Scripture explained',
-      'Jesus Christ',
-      'World English Bible'
-    ].join(', ');
+      // 5. Optimized Tags (under 500 characters)
+      tags = [
+        project.bible_book || 'Genesis',
+        `${project.bible_book || 'Genesis'} ${ch}`,
+        `${project.bible_book || 'Genesis'} Chapter ${ch}`,
+        'ByBibleWisdom',
+        'Bible study',
+        'Christian motivation',
+        'Old Testament',
+        'Creation of the World',
+        'Scripture explained',
+        'Jesus Christ',
+        'World English Bible'
+      ].join(', ');
+    }
 
     // 6. Save in youtube_uploads table
     run(`

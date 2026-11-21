@@ -381,11 +381,28 @@ class EditingEngineService {
     const finalVideoPath = path.join(outputDir, 'final_video.mp4');
     const escAssPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
 
-    // Chapter Title overlay for opening
-    const bookTitle = (project.bible_book || 'GENESIS').toUpperCase();
-    const chapterNum = project.chapter_start || 1;
-    const titleText = `${bookTitle} CHAPTER ${chapterNum}`;
-    const subtitleTag = 'BYBIBLEWISDOM DOCUMENTARY';
+    // Chapter / Prayer Title overlay for opening
+    let titleText = '';
+    let subtitleTag = '';
+
+    const isPrayerOrCustom = project.category === 'PRAYER_AND_DEVOTIONAL' || 
+                             project.category === 'CUSTOM_SCRIPT' || 
+                             !project.bible_book;
+
+    if (isPrayerOrCustom) {
+      titleText = (project.title || 'DAILY PRAYER')
+        .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+        .replace(/[^a-zA-Z0-9\s,\-!']/g, '')
+        .trim()
+        .slice(0, 32)
+        .toUpperCase();
+      subtitleTag = isShorts ? 'PRAYER & DEVOTIONAL' : 'DAILY BIBLE PRAYER';
+    } else {
+      const bookTitle = (project.bible_book || 'SCRIPTURE').toUpperCase();
+      const chapterNum = project.chapter_start || 1;
+      titleText = `${bookTitle} CHAPTER ${chapterNum}`;
+      subtitleTag = isShorts ? 'BIBLE CHAPTER' : 'BYBIBLEWISDOM DOCUMENTARY';
+    }
 
     let filterComplex = '';
     let currentStream = '0:v';

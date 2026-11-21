@@ -17,6 +17,46 @@ class ThumbnailService {
    * - Strict Jesus Rule: Jesus appears only if the chapter is about him.
    */
   buildThemeVariants(book, chapter, projectTitle = '', script = null) {
+    const isPrayerOrCustom = !book || book.toLowerCase() === 'scripture' || 
+                             book.toLowerCase() === 'prayer' || 
+                             (projectTitle && (projectTitle.toLowerCase().includes('heal') || 
+                                               projectTitle.toLowerCase().includes('prayer') ||
+                                               projectTitle.toLowerCase().includes('jesus') ||
+                                               projectTitle.toLowerCase().includes('peace') ||
+                                               projectTitle.toLowerCase().includes('night')));
+
+    if (isPrayerOrCustom && projectTitle) {
+      const cleanTitle = projectTitle.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[^a-zA-Z0-9\s]/g, '').trim().toUpperCase();
+      const words = cleanTitle.split(/\s+/).filter(Boolean);
+      const headline = words.slice(0, 4).join(' ') || 'HEALING PRAYER';
+      return [
+        {
+          variantNumber: 1,
+          title: 'Direct Prayer Call',
+          headlineText: headline,
+          focalScene: 'Reverent portrayal of Jesus Christ offering peace and healing',
+          layoutType: 'IMPACT_BANNER',
+          accentColor: '#F59E0B'
+        },
+        {
+          variantNumber: 2,
+          title: 'Peace & Healing',
+          headlineText: 'PEACE & HEALING TONIGHT',
+          focalScene: 'Compassionate Jesus Christ comforting believers in prayer',
+          layoutType: 'STACKED_CONTRAST',
+          accentColor: '#38BDF8'
+        },
+        {
+          variantNumber: 3,
+          title: 'Faith in Christ',
+          headlineText: 'PRAY THIS BEFORE SLEEP',
+          focalScene: 'Jesus Christ light of the world in serene night presence',
+          layoutType: 'GOLD_EMPHASIS',
+          accentColor: '#FBBF24'
+        }
+      ];
+    }
+
     const safeBook = (book || 'Scripture').trim();
     const ch = parseInt(chapter, 10) || 1;
     const bLower = safeBook.toLowerCase();
@@ -325,7 +365,7 @@ class ThumbnailService {
     const project = get(`SELECT * FROM projects WHERE id = ?`, [projectId]);
     if (!project) throw new Error('Project not found');
 
-    const book = project.bible_book || 'Genesis';
+    const book = project.bible_book || (project.category === 'PRAYER_AND_DEVOTIONAL' || project.category === 'CUSTOM_SCRIPT' ? 'Prayer' : 'Genesis');
     const chapter = project.chapter_start || 1;
     const projectOutDir = path.join(config.PATHS.PROJECTS, projectId, 'output');
     if (!fs.existsSync(projectOutDir)) fs.mkdirSync(projectOutDir, { recursive: true });
