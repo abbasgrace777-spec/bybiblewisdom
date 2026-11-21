@@ -20,6 +20,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Serve static project storage for generated audio, images, and video preview
 app.use('/storage', express.static(config.PATHS.STORAGE));
 app.use('/packages', express.static(path.join(config.PATHS.ROOT, 'ByBibleWisdom')));
+app.use('/data', express.static(path.join(config.PATHS.ROOT, 'data')));
 
 // Register API routes
 app.use('/api', apiRoutes);

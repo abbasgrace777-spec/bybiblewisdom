@@ -105,6 +105,23 @@ export const api = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
+  updateSegmentsBatch: (id, segments) => fetchJson(`/projects/${id}/segments/batch`, {
+    method: 'PUT',
+    body: JSON.stringify({ segments }),
+  }),
+  getJesusPhotos: (format = 'SHORTS') => fetchJson(`/library/jesus-photos?format=${format}`),
+  selectLibraryImage: (id, order, filename, format = 'SHORTS') => fetchJson(`/projects/${id}/segments/${order}/select-library-image`, {
+    method: 'POST',
+    body: JSON.stringify({ filename, format }),
+  }),
+  uploadSceneImage: (id, order, imageBase64, filename) => fetchJson(`/projects/${id}/segments/${order}/upload-image`, {
+    method: 'POST',
+    body: JSON.stringify({ imageBase64, filename }),
+  }),
+  rerunPipeline: (id, options = {}) => fetchJson(`/projects/${id}/pipeline`, {
+    method: 'POST',
+    body: JSON.stringify(options),
+  }),
   regenerateSegmentImage: (id, order, options = {}) => fetchJson(`/projects/${id}/segments/${order}/regenerate-image`, {
     method: 'POST',
     body: JSON.stringify(options),

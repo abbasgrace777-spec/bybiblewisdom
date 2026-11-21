@@ -16,9 +16,12 @@ import {
   Play,
   VolumeX,
   Type,
-  Mic
+  Mic,
+  Edit3,
+  Sparkles
 } from 'lucide-react';
 import { api } from '../services/api';
+import OneClickProductionModal from '../components/OneClickProductionModal';
 
 export default function ReadyToUploadView({ setActiveTab }) {
   const [projects, setProjects] = useState([]);
@@ -27,6 +30,9 @@ export default function ReadyToUploadView({ setActiveTab }) {
   const [loading, setLoading] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [selectingVariant, setSelectingVariant] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   async function handleSelectVariant(variantNum) {
     if (!selectedProjectId) return;
@@ -263,10 +269,15 @@ export default function ReadyToUploadView({ setActiveTab }) {
                       </video>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <div className="text-[11px] text-slate-400 truncate max-w-[240px]">
-                        Path: <span className="font-mono text-slate-300">{packageData.video?.path}</span>
-                      </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-indigo-200" />
+                        <span>Edit Script & Regenerate Video</span>
+                      </button>
+
                       <a
                         href={packageData.video?.downloadUrl}
                         download="Final_Video.mp4"
@@ -600,6 +611,21 @@ export default function ReadyToUploadView({ setActiveTab }) {
         <div className="p-12 text-center text-slate-400">
           <p>No project selected or package data available.</p>
         </div>
+      )}
+
+      {isModalOpen && selectedProject && (
+        <OneClickProductionModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            loadPackageData(selectedProjectId);
+          }}
+          project={selectedProject}
+          initialEditMode={true}
+          onComplete={() => {
+            loadPackageData(selectedProjectId);
+          }}
+        />
       )}
     </div>
   );

@@ -415,6 +415,14 @@ router.post(['/projects/:id/scenes/:order/upload-image', '/projects/:id/segments
       buffer,
       filename || `upload_scene_${req.params.order}.jpg`
     );
+
+    // Invalidate cached scene clip and final video
+    const projectDir = path.join(config.PATHS.PROJECTS, req.params.id);
+    const cachedClip = path.join(projectDir, 'clips', `scene_${req.params.order}.mp4`);
+    if (fs.existsSync(cachedClip)) fs.unlinkSync(cachedClip);
+    const finalVideo = path.join(projectDir, 'output', 'final_video.mp4');
+    if (fs.existsSync(finalVideo)) fs.unlinkSync(finalVideo);
+
     res.json({ success: true, data: result });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
@@ -459,33 +467,204 @@ router.get('/projects/:id/quality-control', async (req, res) => {
   }
 });
 
+// --- Jesus Portrait Masterworks Library ---
+router.get('/library/jesus-photos', (req, res) => {
+  try {
+    const isShorts = (req.query.format || '').toUpperCase() === 'SHORTS' || req.query.isShorts === 'true';
+    const subfolder = isShorts ? 'vertical' : 'horizontal';
+    const libraryDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', subfolder);
+
+    if (!fs.existsSync(libraryDir)) {
+      return res.json({ success: true, count: 0, data: [] });
+    }
+
+    const files = fs.readdirSync(libraryDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+
+    const photoList = files.map(file => {
+      const nameWithoutExt = file.replace(/\.(jpg|png)$/i, '');
+      const title = nameWithoutExt
+        .split('_')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ')
+        .replace(/\bAnd\b/g, '&');
+
+      return {
+        filename: file,
+        title,
+        url: `/data/jesus_photo_library/${subfolder}/${file}`,
+        format: isShorts ? 'SHORTS' : 'LONG_FORM'
+      };
+    });
+
+    res.json({ success: true, count: photoList.length, data: photoList });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/projects/:id/segments/:order/select-library-image', (req, res) => {
+  try {
+    const { filename, format } = req.body;
+    if (!filename) return res.status(400).json({ success: false, error: 'Filename is required' });
+
+    const isShorts = (format || '').toUpperCase() === 'SHORTS';
+    const subfolder = isShorts ? 'vertical' : 'horizontal';
+    const sourcePath = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', subfolder, filename);
+
+    if (!fs.existsSync(sourcePath)) {
+      return res.status(404).json({ success: false, error: `Image not found in library: ${filename}` });
+    }
+
+    const projectDir = path.join(config.PATHS.PROJECTS, req.params.id);
+    const imagesDir = path.join(projectDir, 'images');
+    if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
+
+    const targetPath = path.join(imagesDir, `scene_${req.params.order}.jpg`);
+    fs.copyFileSync(sourcePath, targetPath);
+
+    // Update DB
+    run(`
+      UPDATE script_segments
+      SET media_path = ?, image_status = 'AI_GENERATED', engine_used = 'Authentic Jesus Imagery'
+      WHERE project_id = ? AND segment_order = ?
+    `, [targetPath, req.params.id, parseInt(req.params.order, 10)]);
+
+    // Invalidate cached clip
+    const cachedClip = path.join(projectDir, 'clips', `scene_${req.params.order}.mp4`);
+    if (fs.existsSync(cachedClip)) fs.unlinkSync(cachedClip);
+
+    res.json({
+      success: true,
+      media_path: targetPath,
+      relativeUrl: `/storage/projects/${req.params.id}/images/scene_${req.params.order}.jpg?t=${Date.now()}`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.put('/projects/:id/segments/batch', (req, res) => {
+  try {
+    const { segments: incomingSegments } = req.body;
+    if (!Array.isArray(incomingSegments)) {
+      return res.status(400).json({ success: false, error: 'segments must be an array' });
+    }
+
+    const projectDir = path.join(config.PATHS.PROJECTS, req.params.id);
+    const validMotions = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'STATIC'];
+    let textModified = false;
+
+    for (const seg of incomingSegments) {
+      const order = parseInt(seg.segment_order, 10);
+      if (!order) continue;
+
+      const safeMotion = seg.ken_burns_effect && validMotions.includes(seg.ken_burns_effect) ? seg.ken_burns_effect : null;
+
+      run(`
+        UPDATE script_segments
+        SET narration_text = COALESCE(?, narration_text),
+            image_prompt = COALESCE(?, image_prompt),
+            ken_burns_effect = COALESCE(?, ken_burns_effect),
+            duration_seconds = COALESCE(?, duration_seconds),
+            media_path = COALESCE(?, media_path)
+        WHERE project_id = ? AND segment_order = ?
+      `, [
+        seg.narration_text !== undefined ? seg.narration_text : null,
+        seg.image_prompt !== undefined ? seg.image_prompt : null,
+        safeMotion,
+        seg.duration_seconds !== undefined ? seg.duration_seconds : null,
+        seg.media_path !== undefined ? seg.media_path : null,
+        req.params.id,
+        order
+      ]);
+
+      const cachedClip = path.join(projectDir, 'clips', `scene_${order}.mp4`);
+      if (fs.existsSync(cachedClip)) fs.unlinkSync(cachedClip);
+
+      if (seg.narration_text !== undefined) {
+        textModified = true;
+        const sceneAudio = path.join(projectDir, 'audio', `scene_${order}`, 'audio.mp3');
+        if (fs.existsSync(sceneAudio)) fs.unlinkSync(sceneAudio);
+      }
+    }
+
+    const finalVideo = path.join(projectDir, 'output', 'final_video.mp4');
+    if (fs.existsSync(finalVideo)) fs.unlinkSync(finalVideo);
+
+    if (textModified) {
+      const narrationHash = path.join(projectDir, 'audio', 'narration_hash.txt');
+      if (fs.existsSync(narrationHash)) fs.unlinkSync(narrationHash);
+
+      const narrationMaster = path.join(projectDir, 'audio', 'narration.mp3');
+      if (fs.existsSync(narrationMaster)) fs.unlinkSync(narrationMaster);
+
+      const allSegments = query(`
+        SELECT narration_text FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
+      `, [req.params.id]);
+      const fullNarration = allSegments.map(s => s.narration_text).join('\n\n');
+      run(`UPDATE scripts SET full_narration_text = ? WHERE project_id = ?`, [fullNarration, req.params.id]);
+    }
+
+    res.json({ success: true, count: incomingSegments.length });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.put('/projects/:id/segments/:order', (req, res) => {
   try {
-    const { narration_text, image_prompt, ken_burns_effect, duration_seconds } = req.body;
+    const { narration_text, image_prompt, ken_burns_effect, duration_seconds, media_path } = req.body;
     const project = query(`SELECT id FROM projects WHERE id = ?`, [req.params.id]);
     if (!project || project.length === 0) return res.status(404).json({ success: false, error: 'Project not found' });
+
+    const validMotions = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'STATIC'];
+    const safeMotion = ken_burns_effect && validMotions.includes(ken_burns_effect) ? ken_burns_effect : null;
 
     run(`
       UPDATE script_segments 
       SET narration_text = COALESCE(?, narration_text),
           image_prompt = COALESCE(?, image_prompt),
           ken_burns_effect = COALESCE(?, ken_burns_effect),
-          duration_seconds = COALESCE(?, duration_seconds)
+          duration_seconds = COALESCE(?, duration_seconds),
+          media_path = COALESCE(?, media_path)
       WHERE project_id = ? AND segment_order = ?
     `, [
       narration_text !== undefined ? narration_text : null,
       image_prompt !== undefined ? image_prompt : null,
-      ken_burns_effect !== undefined ? ken_burns_effect : null,
+      safeMotion,
       duration_seconds !== undefined ? duration_seconds : null,
+      media_path !== undefined ? media_path : null,
       req.params.id,
       parseInt(req.params.order, 10)
     ]);
 
+    const projectDir = path.join(config.PATHS.PROJECTS, req.params.id);
+
     // Invalidate cached scene clip
-    const fs = require('node:fs');
-    const path = require('node:path');
-    const cachedClip = path.join(config.PATHS.PROJECTS, req.params.id, 'clips', `scene_${req.params.order}.mp4`);
+    const cachedClip = path.join(projectDir, 'clips', `scene_${req.params.order}.mp4`);
     if (fs.existsSync(cachedClip)) fs.unlinkSync(cachedClip);
+
+    // Invalidate final output so fresh video is rendered
+    const finalVideo = path.join(projectDir, 'output', 'final_video.mp4');
+    if (fs.existsSync(finalVideo)) fs.unlinkSync(finalVideo);
+
+    // If narration text was updated, invalidate scene audio, master narration, and update scripts table
+    if (narration_text !== undefined) {
+      const sceneAudio = path.join(projectDir, 'audio', `scene_${req.params.order}`, 'audio.mp3');
+      if (fs.existsSync(sceneAudio)) fs.unlinkSync(sceneAudio);
+
+      const narrationHash = path.join(projectDir, 'audio', 'narration_hash.txt');
+      if (fs.existsSync(narrationHash)) fs.unlinkSync(narrationHash);
+
+      const narrationMaster = path.join(projectDir, 'audio', 'narration.mp3');
+      if (fs.existsSync(narrationMaster)) fs.unlinkSync(narrationMaster);
+
+      const allSegments = query(`
+        SELECT narration_text FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
+      `, [req.params.id]);
+      const fullNarration = allSegments.map(s => s.narration_text).join('\n\n');
+      run(`UPDATE scripts SET full_narration_text = ? WHERE project_id = ?`, [fullNarration, req.params.id]);
+    }
 
     res.json({ success: true, message: `Scene ${req.params.order} updated successfully.` });
   } catch (err) {

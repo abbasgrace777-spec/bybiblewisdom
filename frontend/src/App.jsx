@@ -35,7 +35,7 @@ export default function App() {
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isOneClickModalOpen, setIsOneClickModalOpen] = useState(false);
   const [productionProject, setProductionProject] = useState(null);
-  
+
   // App state
   const [stats, setStats] = useState(null);
   const [bibleBooks, setBibleBooks] = useState([]);
@@ -283,9 +283,8 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0C1322]/95 backdrop-blur-lg border-t border-slate-800/80 z-40 flex items-center justify-around px-2 shadow-2xl">
         <button
           onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-            activeTab === 'dashboard' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${activeTab === 'dashboard' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <LayoutDashboard className="w-5 h-5" />
           <span>Home</span>
@@ -293,9 +292,8 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('create-video')}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-            activeTab === 'create-video' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${activeTab === 'create-video' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <Sparkles className="w-5 h-5" />
           <span>Create</span>
@@ -303,9 +301,8 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('ready-to-upload')}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-            activeTab === 'ready-to-upload' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${activeTab === 'ready-to-upload' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <FolderCheck className="w-5 h-5" />
           <span>Videos</span>
@@ -313,9 +310,8 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('chapter-production')}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-            activeTab === 'chapter-production' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${activeTab === 'chapter-production' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <ListOrdered className="w-5 h-5" />
           <span>Queue</span>
@@ -323,9 +319,8 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('bible-books')}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-            activeTab === 'bible-books' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${activeTab === 'bible-books' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <BookOpen className="w-5 h-5" />
           <span>Books</span>
