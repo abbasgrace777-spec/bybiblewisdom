@@ -654,15 +654,14 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
         {activeMode === 'MODE_C' && (() => {
           const modeCWordCount = customScriptText.trim().split(/\s+/).filter(Boolean).length;
           const modeCEstSeconds = Math.round(modeCWordCount / 2.3);
-          const isTooLongForShorts = format === 'SHORTS' && modeCWordCount > 130;
 
           return (
             <form onSubmit={handleModeCSubmit} className="p-5 sm:p-6 space-y-4 animate-in fade-in duration-200">
               <div className="p-3.5 rounded-xl bg-emerald-950/25 border border-emerald-500/35 text-xs text-emerald-200 flex items-start gap-2.5">
                 <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <strong className="block font-semibold">Instant Video From Your Exact Words (No AI Changes):</strong>
-                  <span>Paste your pre-written prayer or narration. The studio speaks your exact words word-for-word, matches authentic Jesus portrait masterworks, and renders the 1080p video directly!</span>
+                  <strong className="block font-semibold">Unlimited Words — Spoken Word-For-Word (No Word Limits):</strong>
+                  <span>Paste any script or prayer of any length. The studio speaks every single word you provide, matches authentic Jesus portrait masterworks, and renders your complete video directly!</span>
                 </div>
               </div>
 
@@ -695,30 +694,7 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
                 </div>
               </div>
 
-              {/* Shorts Length Warning Banner */}
-              {isTooLongForShorts && (
-                <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
-                  <div className="text-xs text-amber-200">
-                    <span className="font-bold flex items-center gap-1.5 text-amber-300">
-                      <Clock className="w-4 h-4 text-amber-400" />
-                      <span>YouTube Shorts Duration Notice ({modeCWordCount} words = ~{modeCEstSeconds}s):</span>
-                    </span>
-                    <span className="text-[11px] text-slate-300 block mt-1 leading-relaxed">
-                      YouTube Shorts must strictly be <strong>under 60 seconds</strong> (~120–125 words max). To make a 54s Short, click Auto-Trim below, or change format to <strong>Full (16:9 Landscape)</strong> for the full 3+ minute video:
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAutoTrimToShort}
-                    className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold flex items-center gap-1.5 flex-shrink-0 shadow-lg shadow-amber-500/20 transition-all active:scale-95 cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                    <span>⚡ Trim to 54s Short (~120 words)</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Trim Notification */}
+              {/* Trim Notification (if user clicked optional trim button) */}
               {trimNotification && (
                 <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-300 flex items-center gap-2 animate-in fade-in">
                   <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
@@ -730,27 +706,27 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                    Paste Your Script / Prayer Text
+                    Paste Your Script / Prayer Text (Any Length)
                   </label>
-                  {format === 'SHORTS' ? (
-                    isTooLongForShorts ? (
-                      <span className="text-[11px] text-amber-400 font-semibold flex items-center gap-1">
-                        <span>⚠️ {modeCWordCount} words • ~{modeCEstSeconds}s (Exceeds 60s)</span>
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                        <span>{modeCWordCount > 0 ? `✓ ${modeCWordCount} words • ~${modeCEstSeconds}s (Under 60s)` : '0 words'}</span>
-                      </span>
-                    )
-                  ) : (
-                    <span className="text-[11px] text-sky-400 font-semibold">
-                      {modeCWordCount} words • ~{Math.floor(modeCEstSeconds / 60)}m {modeCEstSeconds % 60}s (Full Video)
+                  <div className="flex items-center gap-2.5">
+                    {modeCWordCount > 130 && (
+                      <button
+                        type="button"
+                        onClick={handleAutoTrimToShort}
+                        className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Optional: Trim to 54s Short</span>
+                      </button>
+                    )}
+                    <span className="text-[11px] text-emerald-400 font-semibold">
+                      {modeCWordCount} words • ~{Math.floor(modeCEstSeconds / 60) > 0 ? `${Math.floor(modeCEstSeconds / 60)}m ${modeCEstSeconds % 60}s` : `${modeCEstSeconds}s`}
                     </span>
-                  )}
+                  </div>
                 </div>
                 <textarea
                   rows={7}
-                  placeholder="Paste your exact narration or prayer here... (e.g. Heavenly Father, tonight I come before you with a heart that needs your healing touch...)"
+                  placeholder="Paste your exact narration or prayer here... (No word limit — paste as many words as you want!)"
                   value={customScriptText}
                   onChange={(e) => setCustomScriptText(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed font-sans"
@@ -761,12 +737,12 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
               {/* Action Button */}
               <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-[#0F172A] py-2">
                 <span className="text-xs text-slate-400">
-                  Direct voice narration + Jesus artwork + 1080p rendering
+                  Speaks 100% of your words + Jesus artwork + 1080p rendering
                 </span>
                 <button
                   type="submit"
                   disabled={isSubmittingCustom || !customScriptText.trim()}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
                 >
                   <Play className="w-4 h-4 fill-slate-950" />
                   <span>{isSubmittingCustom ? 'Preparing Video...' : '⚡ Generate Video Now (My Script)'}</span>

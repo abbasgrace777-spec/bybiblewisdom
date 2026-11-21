@@ -181,18 +181,9 @@ class ProjectService {
       throw new Error('Script text cannot be empty.');
     }
 
-    const words = cleanNarration.split(/\s+/).filter(Boolean);
-    const wordCount = words.length;
-
-    // If SHORTS and text is too long (> 130 words / > 58s), condense to ~120 words (~52-54 seconds)
-    // to strictly respect YouTube Shorts 60s hard limit!
-    if (format === 'SHORTS' && wordCount > 130) {
-      cleanNarration = this.condensePrayerToShort(cleanNarration, 120);
-    }
-
     const finalWords = cleanNarration.split(/\s+/).filter(Boolean);
     const finalWordCount = finalWords.length;
-    // Pacing: ~2.3 words/sec
+    // Natural pacing: ~2.3 words/sec
     const estDuration = Math.max(15, Math.round(finalWordCount / 2.3));
 
     const project = this.createProject({
