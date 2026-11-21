@@ -169,17 +169,17 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
   if (!isOpen || !project) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-[#0F172A] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[92vh] sm:max-h-[88vh] bg-[#0F172A] border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-200">
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex-shrink-0 px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
               <Play className="w-4 h-4 text-amber-400 fill-amber-400" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-100">{project.title}</h3>
-              <p className="text-xs text-amber-400/90 font-medium">
+              <h3 className="text-sm sm:text-base font-bold text-slate-100 truncate max-w-md">{project.title}</h3>
+              <p className="text-[11px] sm:text-xs text-amber-400/90 font-medium">
                 {project.format} • {project.category.replace('_', ' ')} • One-Click Pipeline
               </p>
             </div>
@@ -188,14 +188,14 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
           <button
             onClick={onClose}
             disabled={isExecuting}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-30"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-30 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
           {/* Progress Bar & Current Status */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
