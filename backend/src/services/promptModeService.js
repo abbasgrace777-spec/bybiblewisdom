@@ -308,7 +308,7 @@ Schema:
       }
       if (currentChunk.trim()) customScenes.push(currentChunk.trim());
 
-      const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'SLOW_DRIFT', 'PAN_UP'];
+      const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT'];
       scriptJson = {
         hook: customScenes[0]?.slice(0, 80) || 'Opening Sacred Prayer',
         full_narration_text: cleanUserPrompt,

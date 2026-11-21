@@ -166,7 +166,7 @@ class ProjectService {
       scenes.push(currentChunk.trim());
     }
 
-    const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'SLOW_DRIFT', 'PAN_UP'];
+    const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT'];
 
     // Insert into scripts (fully parameterized to prevent any SQL quote escaping issues)
     run(`
@@ -345,7 +345,7 @@ class ProjectService {
       scenes.push(currentChunk.trim());
     }
 
-    const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'SLOW_DRIFT', 'PAN_UP'];
+    const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT'];
 
     // Insert into scripts (fully parameterized to prevent any SQL quote escaping issues)
     run(`
