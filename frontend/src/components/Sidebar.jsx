@@ -26,7 +26,6 @@ import {
 
 export const PRIMARY_NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'create-video', label: 'Create Video', icon: Sparkles, badge: '1-Click', highlight: true },
   { id: 'ready-to-upload', label: 'My Ready Videos', icon: FolderCheck, badge: 'Download', highlight: true },
   { id: 'chapter-production', label: 'Multi-Chapter Queue', icon: ListOrdered, badge: 'Batch' },
   { id: 'bible-books', label: '66 Bible Books', icon: BookOpen, badge: '66' },

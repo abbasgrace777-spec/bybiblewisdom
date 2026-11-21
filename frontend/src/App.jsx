@@ -291,12 +291,11 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => setActiveTab('create-video')}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${activeTab === 'create-video' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-            }`}
+          onClick={() => setIsNewProjectModalOpen(true)}
+          className="flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl text-[10px] font-bold transition-all text-amber-400 active:scale-95"
         >
-          <Sparkles className="w-5 h-5" />
-          <span>Create</span>
+          <Sparkles className="w-5 h-5 text-amber-400" />
+          <span>+ New</span>
         </button>
 
         <button
