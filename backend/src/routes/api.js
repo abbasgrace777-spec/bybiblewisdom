@@ -111,6 +111,16 @@ router.post('/projects', (req, res) => {
   }
 });
 
+// Create video project directly from user's custom script/prayer with ZERO Ollama rewriting
+router.post('/projects/custom-script', (req, res) => {
+  try {
+    const newProject = projectService.createProjectFromCustomScript(req.body);
+    res.status(201).json({ success: true, data: newProject });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.post('/projects/batch', (req, res) => {
   try {
     const { book, startChapter, endChapter, format } = req.body;

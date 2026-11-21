@@ -278,8 +278,52 @@ Schema:
     const sections = outline.sections || [];
     const claims = outline.claims || [];
 
-    // System prompt enforcing Scripture Veracity and Claim Qualification
-    const systemPrompt = `You are an elite Biblical documentary scriptwriter for ByBibleWisdom.
+    const cleanUserPrompt = (outline.prompt || project.topic || '')
+      .replace(/>>\s*\[music\]\s*>>/gi, '')
+      .replace(/\[music\]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const isPrewrittenScript = cleanUserPrompt.split(/\s+/).length > 35;
+    let scriptJson;
+
+    if (isPrewrittenScript) {
+      console.log(`[PromptMode] Detected full pre-written user script (${cleanUserPrompt.split(/\s+/).length} words). Bypassing Ollama generation and using user script directly!`);
+      const sentences = cleanUserPrompt.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanUserPrompt];
+      const customScenes = [];
+      let currentChunk = '';
+      let currentWords = 0;
+      const targetWords = isShorts ? 18 : 25;
+
+      for (const sentence of sentences) {
+        const sWords = sentence.trim().split(/\s+/).length;
+        if (currentWords + sWords > targetWords && currentWords > 10) {
+          customScenes.push(currentChunk.trim());
+          currentChunk = sentence.trim();
+          currentWords = sWords;
+        } else {
+          currentChunk += ' ' + sentence.trim();
+          currentWords += sWords;
+        }
+      }
+      if (currentChunk.trim()) customScenes.push(currentChunk.trim());
+
+      const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'SLOW_DRIFT', 'PAN_UP'];
+      scriptJson = {
+        hook: customScenes[0]?.slice(0, 80) || 'Opening Sacred Prayer',
+        full_narration_text: cleanUserPrompt,
+        scenes: customScenes.map((sc, i) => ({
+          segment_order: i + 1,
+          narration_text: sc,
+          visual_description: 'Reverent depiction of Jesus Christ with comforting, peaceful illumination',
+          image_prompt: 'Authentic 1st-century portrayal of Jesus Christ, Carl Bloch sacred lighting, 35mm documentary still',
+          ken_burns_effect: motionPresets[i % motionPresets.length],
+          duration_seconds: Math.max(4.0, parseFloat((sc.split(/\s+/).length / 2.3).toFixed(2)))
+        }))
+      };
+    } else {
+      // System prompt enforcing Scripture Veracity and Claim Qualification
+      const systemPrompt = `You are an elite Biblical documentary scriptwriter for ByBibleWisdom.
 CRITICAL: Keep your internal thinking under 60 words. Immediately output ONLY the valid JSON object.
 Write a powerful, reverent, original YouTube narration script based on the approved outline.
 
@@ -321,11 +365,11 @@ STRICT LAWS OF SCRIPT GENERATION:
   ]
 }`;
 
-    const versesContext = verses.map(v => `[${v.citation}] "${v.verse_text}"`).join('\n');
-    const claimsContext = claims.map(c => `[Classification: ${c.classification}] Claim: "${c.claim}" (Notes: ${c.notes})`).join('\n');
-    const sectionsContext = sections.map(s => `Section ${s.section}: ${s.heading} (${s.summary})`).join('\n');
+      const versesContext = verses.map(v => `[${v.citation}] "${v.verse_text}"`).join('\n');
+      const claimsContext = claims.map(c => `[Classification: ${c.classification}] Claim: "${c.claim}" (Notes: ${c.notes})`).join('\n');
+      const sectionsContext = sections.map(s => `Section ${s.section}: ${s.heading} (${s.summary})`).join('\n');
 
-    const prompt = `TOPIC: "${project.topic}"
+      const prompt = `TOPIC: "${project.topic}"
 TITLE: "${project.title}"
 FORMAT: ${project.format}
 SECTIONS:
@@ -339,23 +383,23 @@ ${claimsContext}
 
 Keep thinking brief. Generate the complete script JSON now:`;
 
-    console.log(`[PromptMode] Generating scripture-accurate script with Ollama qwen3:4b for ${project.id}...`);
-    const genResult = await ollamaService.generateCompletion(prompt, systemPrompt, {
-      temperature: 0.2,
-      num_predict: 8000
-    });
+      console.log(`[PromptMode] Generating scripture-accurate script with Ollama qwen3:4b for ${project.id}...`);
+      const genResult = await ollamaService.generateCompletion(prompt, systemPrompt, {
+        temperature: 0.2,
+        num_predict: 8000
+      });
 
-    let rawOutput = genResult.text || '';
-    rawOutput = rawOutput.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const jsonMatch = rawOutput.match(/\{[\s\S]*\}/);
-    if (jsonMatch) rawOutput = jsonMatch[0];
+      let rawOutput = genResult.text || '';
+      rawOutput = rawOutput.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const jsonMatch = rawOutput.match(/\{[\s\S]*\}/);
+      if (jsonMatch) rawOutput = jsonMatch[0];
 
-    let scriptJson;
-    try {
-      scriptJson = JSON.parse(rawOutput);
-    } catch (e) {
-      console.error('[PromptMode] JSON parse error on script:', rawOutput);
-      throw new Error(`Failed to parse script JSON from Ollama: ${e.message}`);
+      try {
+        scriptJson = JSON.parse(rawOutput);
+      } catch (e) {
+        console.error('[PromptMode] JSON parse error on script:', rawOutput);
+        throw new Error(`Failed to parse script JSON from Ollama: ${e.message}`);
+      }
     }
 
     const scenes = scriptJson.scenes || [];

@@ -43,6 +43,10 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  createCustomScriptProject: (data) => fetchJson('/projects/custom-script', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
   updateProjectStatus: (id, status) => fetchJson(`/projects/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),

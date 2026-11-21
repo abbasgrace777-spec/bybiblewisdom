@@ -25,10 +25,42 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
+  // Mode C: Direct Script Mode (Zero AI Rewriting)
+  const [customScriptText, setCustomScriptText] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
+  const [isSubmittingCustom, setIsSubmittingCustom] = useState(false);
+
   const selectedBookObj = bibleBooks.find(b => b.name === selectedBook);
   const totalChaptersForBook = selectedBookObj?.total_chapters || 50;
 
   if (!isOpen) return null;
+
+  // Handle Mode C submission (Direct Custom Script to Video)
+  async function handleModeCSubmit(e) {
+    e.preventDefault();
+    if (!customScriptText.trim()) {
+      setError('Please paste your script or prayer text.');
+      return;
+    }
+    setIsSubmittingCustom(true);
+    setError(null);
+    try {
+      const res = await api.createCustomScriptProject({
+        title: customTitle.trim() || customScriptText.trim().slice(0, 40) + '...',
+        scriptText: customScriptText.trim(),
+        format
+      });
+      if (!res.success || !res.data) {
+        throw new Error(res.error || 'Failed to create project from custom script.');
+      }
+      await onProjectCreated(res.data);
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Error processing custom script.');
+    } finally {
+      setIsSubmittingCustom(false);
+    }
+  }
 
   // Handle Mode A submission (Chapter Mode)
   async function handleModeASubmit(e) {
@@ -132,31 +164,44 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="flex-shrink-0 grid grid-cols-2 border-b border-slate-800 bg-slate-900/40">
+        <div className="flex-shrink-0 grid grid-cols-3 border-b border-slate-800 bg-slate-900/40">
           <button
             type="button"
             onClick={() => { setActiveMode('MODE_A'); setError(null); }}
-            className={`py-3 px-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all ${
+            className={`py-3 px-2 sm:px-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all ${
               activeMode === 'MODE_A'
                 ? 'border-amber-500 text-amber-300 bg-amber-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <BookOpen className="w-4 h-4" />
-            <span>Mode A: Chapter Mode</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="truncate">1. Chapter Mode</span>
           </button>
 
           <button
             type="button"
             onClick={() => { setActiveMode('MODE_B'); setError(null); }}
-            className={`py-3 px-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all ${
+            className={`py-3 px-2 sm:px-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all ${
               activeMode === 'MODE_B'
                 ? 'border-amber-500 text-amber-300 bg-amber-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Mode B: Prompt Mode</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="truncate">2. AI Question</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setActiveMode('MODE_C'); setError(null); }}
+            className={`py-3 px-2 sm:px-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+              activeMode === 'MODE_C'
+                ? 'border-emerald-500 text-emerald-300 bg-emerald-500/10'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="truncate">3. Paste My Script</span>
           </button>
         </div>
 
@@ -542,6 +587,83 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
               </div>
             )}
           </div>
+        )}
+
+        {/* MODE C: PASTE MY SCRIPT (ZERO OLLAMA REWRITING) */}
+        {activeMode === 'MODE_C' && (
+          <form onSubmit={handleModeCSubmit} className="p-5 sm:p-6 space-y-4 animate-in fade-in duration-200">
+            <div className="p-3.5 rounded-xl bg-emerald-950/25 border border-emerald-500/35 text-xs text-emerald-200 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-semibold">Instant Video From Your Exact Words (No AI Changes):</strong>
+                <span>Paste your pre-written prayer or narration. The studio speaks your exact words word-for-word, matches authentic Jesus portrait masterworks, and renders the 1080p video directly!</span>
+              </div>
+            </div>
+
+            {/* Title & Format */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Video Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sleep Healed: 3 Bible Verses for Peaceful Nights"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Format
+                </label>
+                <select
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-emerald-300 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="SHORTS">Shorts (9:16 Vertical)</option>
+                  <option value="LONG_FORM">Full (16:9 Landscape)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Script Textarea */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Paste Your Script / Prayer Text
+                </label>
+                <span className="text-[11px] text-emerald-400 font-semibold">
+                  {customScriptText.trim().split(/\s+/).filter(Boolean).length} words • ~{Math.round(customScriptText.trim().split(/\s+/).filter(Boolean).length / 2.3)}s
+                </span>
+              </div>
+              <textarea
+                rows={7}
+                placeholder="Paste your exact narration or prayer here... (e.g. Heavenly Father, tonight I come before you with a heart that needs your healing touch...)"
+                value={customScriptText}
+                onChange={(e) => setCustomScriptText(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed font-sans"
+                required
+              />
+            </div>
+
+            {/* Action Button */}
+            <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-[#0F172A] py-2">
+              <span className="text-xs text-slate-400">
+                Direct voice narration + Jesus artwork + 1080p rendering
+              </span>
+              <button
+                type="submit"
+                disabled={isSubmittingCustom || !customScriptText.trim()}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95"
+              >
+                <Play className="w-4 h-4 fill-slate-950" />
+                <span>{isSubmittingCustom ? 'Preparing Video...' : '⚡ Generate Video Now (My Script)'}</span>
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>
