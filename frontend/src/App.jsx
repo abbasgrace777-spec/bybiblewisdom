@@ -271,14 +271,20 @@ export default function App() {
       />
 
       {/* 4. One-Click Automated Production Modal */}
-      <OneClickProductionModal
-        isOpen={isOneClickModalOpen}
-        onClose={() => setIsOneClickModalOpen(false)}
-        project={productionProject}
-        onComplete={() => {
-          loadAllData();
-        }}
-      />
+      {isOneClickModalOpen && productionProject && (
+        <OneClickProductionModal
+          key={productionProject.id}
+          isOpen={isOneClickModalOpen}
+          onClose={() => {
+            setIsOneClickModalOpen(false);
+            setProductionProject(null);
+          }}
+          project={productionProject}
+          onComplete={() => {
+            loadAllData();
+          }}
+        />
+      )}
       {/* 5. Mobile Bottom Navigation Bar (Android & iOS) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0C1322]/95 backdrop-blur-lg border-t border-slate-800/80 z-40 flex items-center justify-around px-2 shadow-2xl">
         <button

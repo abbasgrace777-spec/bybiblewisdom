@@ -35,8 +35,24 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
   const [activeJesusPickerScene, setActiveJesusPickerScene] = useState(null);
   const [imageTimestamps, setImageTimestamps] = useState({});
 
+  const currentProjectIdRef = useRef(null);
+
   useEffect(() => {
-    if (isOpen && project && !isExecuting && !result) {
+    if (!isOpen || !project) {
+      currentProjectIdRef.current = null;
+      return;
+    }
+
+    // Always reset whenever opening or switching to a new project
+    if (currentProjectIdRef.current !== project.id) {
+      currentProjectIdRef.current = project.id;
+      setResult(null);
+      setError(null);
+      setLogs([]);
+      setAwaitingVisuals(null);
+      setUploaded(false);
+      setIsEditMode(initialEditMode);
+
       if (project.output_video_path || project.status === 'RENDERED') {
         setIsExecuting(false);
         setPercent(100);
@@ -51,10 +67,15 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
           openEditStudio();
         }
       } else {
+        // Unrendered project: start fresh production pipeline!
+        setIsExecuting(true);
+        setCurrentStep(1);
+        setPercent(10);
+        setStepName('Initializing Production Pipeline...');
         runPipeline();
       }
     }
-  }, [isOpen, project]);
+  }, [isOpen, project?.id]);
 
   async function openEditStudio() {
     setIsEditMode(true);
@@ -157,6 +178,7 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
 
   async function runPipeline(extraParams = {}) {
     setIsExecuting(true);
+    setResult(null);
     setError(null);
     setAwaitingVisuals(null);
     setLogs([]);
