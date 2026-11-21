@@ -14,9 +14,21 @@ class SeoService {
    * 3. Ancient Revelation (Hebrew/Greek meaning, timeless insight)
    */
   generateTitleOptions(project) {
+    const isShorts = project.format === 'SHORTS';
+
+    // If user-provided custom prayer or script, use the user's title
+    if (project.category === 'PRAYER_AND_DEVOTIONAL' || project.category === 'CUSTOM_SCRIPT' || !project.bible_book) {
+      const base = (project.title || 'Sacred Prayer & Scripture').slice(0, 52);
+      const titleShort = isShorts ? `${base} #Shorts` : base;
+      return [
+        { angle: 'Sacred Title', title: titleShort, length: titleShort.length, valid: true },
+        { angle: 'Healing Prayer', title: isShorts ? `Jesus Healing Prayer: ${base} #Shorts`.slice(0, 68) : `Jesus Healing Prayer: ${base}`.slice(0, 68), length: 60, valid: true },
+        { angle: 'Peace & Hope', title: isShorts ? `A Peaceful Night In God's Hands #Shorts` : `A Peaceful Night In God's Hands | Deep Prayer`, length: 45, valid: true }
+      ];
+    }
+
     const book = project.bible_book || 'Genesis';
     const ch = project.chapter_start || 1;
-    const isShorts = project.format === 'SHORTS';
 
     const options = [];
 
