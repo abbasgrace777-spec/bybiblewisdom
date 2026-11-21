@@ -191,29 +191,45 @@ export default function ChapterProductionView({ setActiveTab }) {
           {/* Chapters */}
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">Start Ch</label>
-              <input
-                type="number"
-                min="1"
-                max={currentBookObj.total_chapters}
+              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                Start Ch ({currentBookObj.total_chapters} Total)
+              </label>
+              <select
                 value={startChapter}
-                onChange={(e) => setStartChapter(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setStartChapter(val);
+                  if (mode === 'single') setEndChapter(val);
+                  else if (endChapter < val) setEndChapter(val);
+                }}
                 disabled={mode === 'entire_book'}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-400 disabled:opacity-50"
-              />
+                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-amber-300 focus:outline-none focus:border-amber-400 disabled:opacity-50 cursor-pointer"
+              >
+                {Array.from({ length: currentBookObj.total_chapters || 50 }, (_, i) => i + 1).map((chNum) => (
+                  <option key={chNum} value={chNum} className="bg-slate-900 text-slate-100 font-medium">
+                    Chapter {chNum}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {mode === 'range' && (
               <div className="flex-1">
                 <label className="block text-[11px] font-semibold text-slate-400 mb-1">End Ch</label>
-                <input
-                  type="number"
-                  min={startChapter}
-                  max={currentBookObj.total_chapters}
+                <select
                   value={endChapter}
-                  onChange={(e) => setEndChapter(Math.min(currentBookObj.total_chapters, parseInt(e.target.value) || startChapter))}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
-                />
+                  onChange={(e) => setEndChapter(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer"
+                >
+                  {Array.from(
+                    { length: Math.max(1, (currentBookObj.total_chapters || 50) - Number(startChapter) + 1) },
+                    (_, i) => Number(startChapter) + i
+                  ).map((chNum) => (
+                    <option key={chNum} value={chNum} className="bg-slate-900 text-slate-100 font-medium">
+                      Chapter {chNum}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
           </div>

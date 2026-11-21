@@ -134,30 +134,42 @@ export default function DashboardView({
 
             {/* Step 2: Select Chapter */}
             <div className="flex flex-col">
-              <label className="text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-[10px] font-bold">2</span>
-                Chapter (1 to {maxChapters})
+              <label className="text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-[10px] font-bold">2</span>
+                  Chapter
+                </span>
+                <span className="text-[11px] text-amber-400/80 font-normal">
+                  ({maxChapters} Chapters)
+                </span>
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setChapter(Math.max(1, chapter - 1))}
-                  className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white font-bold text-base flex items-center justify-center active:scale-95"
+                  onClick={() => setChapter((prev) => Math.max(1, Number(prev) - 1))}
+                  disabled={Number(chapter) <= 1}
+                  title="Previous Chapter"
+                  className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center active:scale-95 transition-all"
                 >
                   -
                 </button>
-                <input
-                  type="number"
-                  min="1"
-                  max={maxChapters}
+                <select
                   value={chapter}
-                  onChange={(e) => setChapter(Math.max(1, Math.min(maxChapters, parseInt(e.target.value, 10) || 1)))}
-                  className="flex-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-sm font-bold text-center text-amber-300 focus:outline-none focus:border-amber-500"
-                />
+                  onChange={(e) => setChapter(Number(e.target.value))}
+                  className="flex-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+                >
+                  {Array.from({ length: maxChapters }, (_, i) => i + 1).map((chNum) => (
+                    <option key={chNum} value={chNum} className="bg-slate-900 text-slate-100 font-medium">
+                      Chapter {chNum}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
-                  onClick={() => setChapter(Math.min(maxChapters, chapter + 1))}
-                  className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white font-bold text-base flex items-center justify-center active:scale-95"
+                  onClick={() => setChapter((prev) => Math.min(maxChapters, Number(prev) + 1))}
+                  disabled={Number(chapter) >= maxChapters}
+                  title="Next Chapter"
+                  className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center active:scale-95 transition-all"
                 >
                   +
                 </button>

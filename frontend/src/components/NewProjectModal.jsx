@@ -25,6 +25,9 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
+  const selectedBookObj = bibleBooks.find(b => b.name === selectedBook);
+  const totalChaptersForBook = selectedBookObj?.total_chapters || 50;
+
   if (!isOpen) return null;
 
   // Handle Mode A submission (Chapter Mode)
@@ -238,7 +241,10 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
                 </label>
                 <select
                   value={selectedBook}
-                  onChange={(e) => setSelectedBook(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedBook(e.target.value);
+                    setChapter(1);
+                  }}
                   className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
                 >
                   {bibleBooks.map((b) => (
@@ -251,16 +257,19 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated, bib
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  Chapter
+                  Chapter ({totalChaptersForBook})
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="150"
+                <select
                   value={chapter}
-                  onChange={(e) => setChapter(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
-                />
+                  onChange={(e) => setChapter(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+                >
+                  {Array.from({ length: totalChaptersForBook }, (_, i) => i + 1).map((chNum) => (
+                    <option key={chNum} value={chNum} className="bg-slate-900 text-slate-100 font-medium">
+                      Chapter {chNum}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
