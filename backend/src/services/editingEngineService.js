@@ -329,34 +329,50 @@ class EditingEngineService {
       }
     }
 
-    // Step 1: Render Scene Clips with Alternating Ken Burns Motion & Crossfade Overlap
-    console.log(`[EditingEngine] Rendering cinematic scene clips for ${segments.length} scenes (Dynamic motions, CRF 18, 30fps)...`);
-    const clipPaths = [];
+    // Step 1: Render Scene Clips with Alternating Ken Burns Motion (Concurrent Multi-Core Rendering)
+    console.log(`[EditingEngine] Rendering cinematic scene clips for ${segments.length} scenes (Concurrent multi-core rendering, CRF 18, 30fps)...`);
     const motionPresets = ['ZOOM_IN', 'ZOOM_OUT', 'PAN_LEFT', 'PAN_RIGHT', 'PAN_UP', 'SLOW_DRIFT'];
+    const clipPaths = new Array(segments.length);
 
-    for (let i = 0; i < segments.length; i++) {
-      const seg = segments[i];
+    // Concurrency pool (up to 3 parallel FFmpeg scene renders utilizing multi-core CPU)
+    const CONCURRENCY = 3;
+    let completedCount = 0;
+
+    const tasks = segments.map((seg, i) => async () => {
       const isLast = (i === segments.length - 1);
       const extraDuration = isLast ? 0 : this.crossfadeDuration;
       const effect = seg.ken_burns_effect || motionPresets[i % motionPresets.length];
       seg.ken_burns_effect = effect;
-
-      if (onProgress) {
-        onProgress({
-          phase: 'CLIPS',
-          current: i + 1,
-          total: segments.length,
-          message: `Rendering Scene ${seg.segment_order}/${segments.length} [${effect}] (${sceneDurations[i]}s)`
-        });
-      }
 
       const clipRes = await this.renderSceneClip(projectId, seg, {
         format: isShorts ? 'SHORTS' : 'LONG_FORM',
         duration: sceneDurations[i],
         extraDuration
       });
-      clipPaths.push(clipRes.clipPath);
+      clipPaths[i] = clipRes.clipPath;
+      completedCount++;
+
+      if (onProgress) {
+        onProgress({
+          phase: 'CLIPS',
+          current: completedCount,
+          total: segments.length,
+          message: `Rendered Scene ${completedCount}/${segments.length} [${effect}] (${sceneDurations[i]}s)`
+        });
+      }
+    });
+
+    const pool = [];
+    for (const task of tasks) {
+      const p = task().then(() => {
+        pool.splice(pool.indexOf(p), 1);
+      });
+      pool.push(p);
+      if (pool.length >= CONCURRENCY) {
+        await Promise.race(pool);
+      }
     }
+    await Promise.all(pool);
 
     // Step 2: Track 3 Mastering - Apply broadcast audio mastering to narration (-16 LUFS, AAC 192k, ZERO BGM)
     const masteredAudioPath = path.join(outputDir, 'narration_mastered.wav');
