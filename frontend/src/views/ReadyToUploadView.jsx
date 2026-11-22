@@ -18,7 +18,8 @@ import {
   Type,
   Mic,
   Edit3,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { api } from '../services/api';
 import OneClickProductionModal from '../components/OneClickProductionModal';
@@ -151,11 +152,18 @@ export default function ReadyToUploadView({ setActiveTab }) {
                 </h3>
               </div>
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
-                packageData.safeSourceCheck?.overallSafe
-                  ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                !packageData.video?.available
+                  ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                  : packageData.safeSourceCheck?.overallSafe
+                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
               }`}>
-                {packageData.safeSourceCheck?.overallSafe ? (
+                {!packageData.video?.available ? (
+                  <>
+                    <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span>PRODUCTION IN PROGRESS</span>
+                  </>
+                ) : packageData.safeSourceCheck?.overallSafe ? (
                   <>
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span>SAFE FOR MONETIZATION</span>
@@ -197,13 +205,23 @@ export default function ReadyToUploadView({ setActiveTab }) {
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                     packageData.safeSourceCheck?.images?.passed
                       ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-rose-500/20 text-rose-300'
+                      : !packageData.video?.available && (packageData.safeSourceCheck?.images?.fallbackCount || 0) === 0
+                        ? 'bg-cyan-500/20 text-cyan-300'
+                        : 'bg-rose-500/20 text-rose-300'
                   }`}>
-                    {packageData.safeSourceCheck?.images?.passed ? 'PASSED' : 'FALLBACK'}
+                    {packageData.safeSourceCheck?.images?.passed 
+                      ? 'PASSED' 
+                      : !packageData.video?.available && (packageData.safeSourceCheck?.images?.fallbackCount || 0) === 0
+                        ? 'IN PROGRESS'
+                        : 'FALLBACK'}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
-                  {packageData.safeSourceCheck?.images?.details || 'AI-generated / CC0 only. No procedural fallbacks.'}
+                  {packageData.safeSourceCheck?.images?.passed
+                    ? (packageData.safeSourceCheck?.images?.details || 'AI-generated / CC0 only. No procedural fallbacks.')
+                    : !packageData.video?.available && (packageData.safeSourceCheck?.images?.fallbackCount || 0) === 0
+                      ? 'Scene visual prompts verified. Final scene assembly completes upon video rendering.'
+                      : (packageData.safeSourceCheck?.images?.details || 'AI-generated / CC0 only. No procedural fallbacks.')}
                 </p>
               </div>
 
