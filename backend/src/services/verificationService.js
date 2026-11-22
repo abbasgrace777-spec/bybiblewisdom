@@ -143,9 +143,17 @@ class VerificationService {
       allPassed ? 1 : 0
     ]);
 
-    // Update project status
+    // Update project status (preserve RENDERED or COMPLETED if video was already rendered)
     if (allPassed) {
-      run(`UPDATE projects SET status = 'ACCURACY_CHECKED', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [projectId]);
+      run(`
+        UPDATE projects 
+        SET status = CASE 
+          WHEN status IN ('RENDERED', 'COMPLETED') THEN status 
+          ELSE 'ACCURACY_CHECKED' 
+        END, 
+        updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `, [projectId]);
     }
 
     return auditResults;

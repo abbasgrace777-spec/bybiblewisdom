@@ -183,6 +183,17 @@ class PipelineService {
       const qcResult = await qualityControlService.runFullQualityControl(projectId);
 
       // Step 10: Complete & Ready for YouTube Review
+      run(`
+        UPDATE projects 
+        SET status = 'RENDERED', 
+            current_step = 10, 
+            current_step_name = 'Production Complete', 
+            progress_percent = 100, 
+            error_message = NULL,
+            updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `, [projectId]);
+
       notify(10, 'Production Complete — Ready for Private YouTube Review', 100, {
         videoUrl: videoResult.relativeUrl,
         thumbnailUrl: thumbResult.relativeUrl,
