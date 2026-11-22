@@ -31,6 +31,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
   const [copiedField, setCopiedField] = useState(null);
   const [selectingVariant, setSelectingVariant] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalEditMode, setModalEditMode] = useState(false);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
@@ -274,8 +275,11 @@ export default function ReadyToUploadView({ setActiveTab }) {
 
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                       <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow"
+                        onClick={() => {
+                          setModalEditMode(true);
+                          setIsModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow cursor-pointer"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-indigo-200" />
                         <span>Edit Script & Regenerate Video</span>
@@ -284,7 +288,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
                       <a
                         href={packageData.video?.downloadUrl}
                         download="Final_Video.mp4"
-                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors"
+                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Download MP4</span>
@@ -294,8 +298,19 @@ export default function ReadyToUploadView({ setActiveTab }) {
                 ) : (
                   <div className="aspect-video bg-slate-950 rounded-xl border border-dashed border-slate-800 flex flex-col items-center justify-center text-center p-6 text-slate-500">
                     <AlertTriangle className="w-8 h-8 text-amber-500 mb-2" />
-                    <p className="text-xs font-semibold text-slate-300">Video not rendered yet</p>
-                    <p className="text-[11px] text-slate-500 mt-1">Render this project in the Video Editor tab first.</p>
+                    <p className="text-xs font-semibold text-slate-200">Video not rendered yet</p>
+                    <p className="text-[11px] text-slate-400 mt-1 max-w-sm">This project is currently in progress. Click below to run the full production pipeline (Script, Voice, Visuals & 1080p Video).</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalEditMode(false);
+                        setIsModalOpen(true);
+                      }}
+                      className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-slate-950" />
+                      <span>⚡ Start / Resume 1-Click Production</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -624,7 +639,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
             loadPackageData(selectedProjectId);
           }}
           project={selectedProject}
-          initialEditMode={true}
+          initialEditMode={modalEditMode}
           onComplete={() => {
             loadPackageData(selectedProjectId);
           }}

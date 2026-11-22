@@ -243,8 +243,19 @@ class SeoService {
 
     let description = '';
     let tags = '';
+    let timestamps = [];
+    let keyVerseText = 'In the beginning, God created the heavens and the earth.';
+    let keyVerseRef = 'Genesis 1:1';
 
     if (isPrayerOrCustom) {
+      keyVerseText = 'Come to me, all you who labor and are heavily burdened, and I will give you rest.';
+      keyVerseRef = 'Matthew 11:28';
+
+      const segments = query(`
+        SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
+      `, [projectId]);
+      timestamps = this.getRealTimestamps(projectId, segments);
+
       description = `${chosenTitle}
 
 A reverent Christian prayer offering peace, bodily healing, and comforting rest in the presence of Jesus Christ.
@@ -281,14 +292,14 @@ Narration audio and authentic visual artwork produced for prayer and devotional 
         WHERE book_name = ? AND chapter = ? AND translation = 'WEB' AND verse = 1
       `, [project.bible_book || 'Genesis', ch]);
 
-      const keyVerseText = verseRow ? verseRow.verse_text : (book ? book.key_verse_text : 'In the beginning, God created the heavens and the earth.');
-      const keyVerseRef = `${project.bible_book || 'Genesis'} ${ch}:${verseRow ? verseRow.verse : 1}`;
+      keyVerseText = verseRow ? verseRow.verse_text : (book ? book.key_verse_text : 'In the beginning, God created the heavens and the earth.');
+      keyVerseRef = `${project.bible_book || 'Genesis'} ${ch}:${verseRow ? verseRow.verse : 1}`;
 
       // 3. Timestamps from real subtitle timing or audio durations
       const segments = query(`
         SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
       `, [projectId]);
-      const timestamps = this.getRealTimestamps(projectId, segments);
+      timestamps = this.getRealTimestamps(projectId, segments);
 
       // 4. Full YouTube Description with Timestamps & Compliance Notice
       description = `${chosenTitle}
