@@ -278,7 +278,7 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
               };
               setResult(resData);
               if (onComplete) onComplete(resData);
-            } else if (p.status === 'FAILED') {
+            } else if (p.status === 'FAILED' && attempts > 3) {
               clearInterval(poller);
               setIsExecuting(false);
               setError(p.error_message || 'Production halted. Please review errors and retry.');

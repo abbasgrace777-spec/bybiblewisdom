@@ -43,6 +43,13 @@ class PipelineService {
     };
 
     try {
+      // Clear any prior failure state and mark project active
+      run(`
+        UPDATE projects 
+        SET status = 'IN_PROGRESS', error_message = NULL, current_step = 1, progress_percent = 10, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `, [projectId]);
+
       const project = projectService.getProjectById(projectId);
       if (!project) throw new Error('Project not found');
 
