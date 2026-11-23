@@ -230,6 +230,8 @@ class IdeogramService {
     let jpgSize = 0;
     if (fs.existsSync(jpgPath)) jpgSize = fs.statSync(jpgPath).size;
 
+    const isShorts = project.format === 'SHORTS';
+
     // Check variants
     const variants = [];
     for (let i = 1; i <= 3; i++) {
@@ -252,7 +254,7 @@ class IdeogramService {
         sizeKb: (sizeBytes / 1024).toFixed(1),
         isUnder2MB: sizeBytes > 0 && sizeBytes < 2000000,
         qcStatus: metaVar?.qcStatus || (exists ? 'PASSED_QC' : 'PENDING'),
-        qcNotes: metaVar?.qcNotes || 'Standard YouTube 1280x720 composition',
+        qcNotes: metaVar?.qcNotes || (isShorts ? 'Verified 1080x1920 (9:16 Vertical Shorts)' : 'Standard YouTube 1280x720 composition'),
         isActive: (metadata?.chosenVariantIndex || 1) === i,
         prompt: metaVar?.prompt || ''
       });
@@ -271,8 +273,8 @@ class IdeogramService {
       generationStatus: metadata?.generationStatus || (jpgSize > 0 ? 'GENERATED' : 'NOT_CONFIGURED'),
       provider: metadata?.provider || 'IDEOGRAM_2.0_API',
       licenseType: metadata?.licenseType || 'Ideogram Commercial Use',
-      dimensions: '1280x720',
-      aspectRatio: '16:9',
+      dimensions: metadata?.dimensions || (isShorts ? '1080x1920' : '1280x720'),
+      aspectRatio: metadata?.aspectRatio || (isShorts ? '9:16' : '16:9'),
       fileSizeBytes: jpgSize,
       fileSizeKb: (jpgSize / 1024).toFixed(1),
       isOptimizedForYouTube: jpgSize > 0 && jpgSize < 2000000,

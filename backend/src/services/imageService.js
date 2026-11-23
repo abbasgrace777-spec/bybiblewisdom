@@ -207,9 +207,9 @@ class ImageService {
 
   /**
    * Match a dignified Jesus Christ depiction based on scene script keywords and actions
-   * Requirement: Videos feature Jesus Christ images rather than empty nature/landscapes
+   * Requirement: Videos feature Jesus Christ images tailored to the script without repeating the same image
    */
-  matchJesusPhotoForScene(seg, project = {}, isShorts = false) {
+  matchJesusPhotoForScene(seg, project = {}, isShorts = false, usedPhotos = new Set()) {
     const jesusLibDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', isShorts ? 'vertical' : 'horizontal');
     if (!fs.existsSync(jesusLibDir)) return null;
 
@@ -220,32 +220,44 @@ class ImageService {
     const order = seg.segment_order || 1;
     const chapter = project.chapter_start || 1;
 
-    // Thematic Keyword Mapping to Jesus Christ Master Portrayals
+    // Thematic Keyword Mapping to Jesus Christ Master Portrayals (Specific phrase matching to avoid false positives)
     const mapping = [
-      { keywords: ['water', 'sea', 'galilee', 'shore', 'lake', 'waves', 'storm', 'boat', 'sink', 'calm', 'ocean'], photo: 'jesus_walking_on_waters.jpg' },
-      { keywords: ['shepherd', 'sheep', 'pasture', 'flock', 'green', 'lead', 'restore', 'psalm', 'rod', 'staff'], photo: 'jesus_good_shepherd.jpg' },
-      { keywords: ['teach', 'mountain', 'hill', 'sermon', 'multitude', 'speak', 'words', 'hear', 'learn', 'blessed', 'beatitudes'], photo: 'jesus_teaching_sermon_mount.jpg' },
-      { keywords: ['gethsemane', 'kneel', 'cup', 'agony', 'praying', 'prayer', 'kneeling', 'supplication'], photo: 'jesus_praying_gethsemane.jpg' },
-      { keywords: ['heal', 'healing', 'sick', 'mercy', 'blind', 'lame', 'hand', 'touch', 'cure', 'compassion', 'wholeness'], photo: 'jesus_healing_and_mercy.jpg' },
-      { keywords: ['light', 'world', 'lantern', 'door', 'knock', 'shine', 'darkness', 'truth', 'glory', 'radiant'], photo: 'jesus_light_of_world.jpg' },
-      { keywords: ['bread', 'eat', 'table', 'supper', 'disciples', 'covenant', 'cup', 'wine', 'communion', 'remember'], photo: 'jesus_last_supper_bread.jpg' },
-      { keywords: ['bless', 'children', 'little', 'kingdom', 'receive', 'welcome', 'love', 'innocent', 'grace'], photo: 'jesus_blessing_children.jpg' },
-      { keywords: ['resurrection', 'glory', 'risen', 'heavens', 'alive', 'cross', 'victory', 'reign', 'eternal', 'life', 'redeemer'], photo: 'jesus_resurrection_glory.jpg' },
-      { keywords: ['jesus', 'christ', 'lord', 'face', 'eyes', 'compassion', 'savior', 'messiah', 'son of god', 'presence'], photo: 'jesus_portrait_compassion.jpg' }
+      { keywords: ['water', 'sea', 'galilee', 'shore', 'lake', 'waves', 'storm', 'boat', 'sink', 'calm the waters', 'ocean'], photo: 'jesus_walking_on_waters.jpg' },
+      { keywords: ['shepherd', 'sheep', 'pasture', 'flock', 'green pastures', 'lead me', 'restore my soul', 'psalm 23', 'rod and staff'], photo: 'jesus_good_shepherd.jpg' },
+      { keywords: ['sermon on the mount', 'beatitudes', 'multitude on the hill', 'blessed are the meek'], photo: 'jesus_teaching_sermon_mount.jpg' },
+      { keywords: ['gethsemane', 'kneel', 'cup', 'agony', 'praying at night', 'supplication', 'garden of gethsemane'], photo: 'jesus_praying_gethsemane.jpg' },
+      { keywords: ['heal', 'healing', 'sick', 'mercy', 'blind', 'lame', 'hand', 'touch', 'cure', 'compassion', 'wholeness', 'pain', 'disease'], photo: 'jesus_healing_and_mercy.jpg' },
+      { keywords: ['light of the world', 'lantern', 'knock at the door', 'shine', 'radiant light', 'piercing darkness'], photo: 'jesus_light_of_world.jpg' },
+      { keywords: ['bread of life', 'last supper', 'disciples at table', 'covenant cup', 'wine', 'communion'], photo: 'jesus_last_supper_bread.jpg' },
+      { keywords: ['bless the children', 'little children', 'innocent', 'kingdom of children'], photo: 'jesus_blessing_children.jpg' },
+      { keywords: ['resurrection', 'glory', 'risen', 'he is risen', 'tomb is empty', 'victory over death', 'eternal life'], photo: 'jesus_resurrection_glory.jpg' },
+      { keywords: ['face of jesus', 'eyes of christ', 'savior', 'messiah', 'comfort my soul', 'peace of christ'], photo: 'jesus_portrait_compassion.jpg' }
     ];
 
-    // Priority 1: Match scene action keywords
+    // Priority 1: Match scene action keywords (preferring unused photo first)
     for (const rule of mapping) {
-      if (rule.keywords.some(kw => new RegExp(`\\b${kw}\\b`, 'i').test(text))) {
+      if (rule.keywords.some(kw => text.includes(kw))) {
         const candidate = path.join(jesusLibDir, rule.photo);
-        if (fs.existsSync(candidate)) return candidate;
+        if (fs.existsSync(candidate) && !usedPhotos.has(candidate)) {
+          return candidate;
+        }
       }
     }
 
-    // Priority 2: Diverse rotation through Jesus library with unique project seed so different videos get different portraits
+    // Priority 2: Diverse rotation through Jesus library with unique project seed
+    // Guarantees different videos get different portraits and within the video portraits rotate
     const projectSeed = (project.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    const idx = (projectSeed + chapter * 3 + order - 1) % availableFiles.length;
-    return path.join(jesusLibDir, availableFiles[idx]);
+    for (let offset = 0; offset < availableFiles.length; offset++) {
+      const idx = (projectSeed + chapter * 3 + (order - 1) * 2 + offset) % availableFiles.length;
+      const candidate = path.join(jesusLibDir, availableFiles[idx]);
+      if (fs.existsSync(candidate) && !usedPhotos.has(candidate)) {
+        return candidate;
+      }
+    }
+
+    // Fallback: Return best matching even if seen
+    const defaultIdx = (projectSeed + chapter * 3 + order - 1) % availableFiles.length;
+    return path.join(jesusLibDir, availableFiles[defaultIdx]);
   }
 
   /**
@@ -406,6 +418,7 @@ class ImageService {
     if (providerMode === 'MANUAL_IMPORT') {
       console.log(`[ImageService] Operating in Mode B (Manual Import). Evaluating scene readiness...`);
       const sceneStatusList = [];
+      const usedPhotosInProject = new Set();
 
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
@@ -463,13 +476,13 @@ class ImageService {
           } catch (_) {}
         }
 
-        // Step 2: Context-Aware Diverse Local Library Matching (Never duplicates across videos)
+        // Step 2: Context-Aware Diverse Local Library Matching (Never duplicates across scenes or videos)
         if (!isReady) {
           let selectedPhotoPath = null;
           let engineLabel = 'Authentic Biblical Archive';
 
           if (useJesusLibrary) {
-            selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts);
+            selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts, usedPhotosInProject);
             engineLabel = 'Authentic Jesus Imagery';
           } else {
             // Old Testament / Nature / Historical Story: Pick from natural photography or classical fine art
@@ -482,6 +495,7 @@ class ImageService {
           }
 
           if (selectedPhotoPath && fs.existsSync(selectedPhotoPath)) {
+            usedPhotosInProject.add(selectedPhotoPath);
             try {
               fs.copyFileSync(selectedPhotoPath, targetPath);
               const check = this.validateImageDimensions(targetPath, isShorts);

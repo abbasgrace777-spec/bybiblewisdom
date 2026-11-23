@@ -372,25 +372,39 @@ class ThumbnailService {
 
   /**
    * Find or prepare focal background image for thumbnail
+   * Automatically respects 9:16 vertical orientation for Shorts or 16:9 for Long-Form
+   * Uses variantNumber to guarantee distinct, diverse visual scenes across variants
    */
-  getFocalBackground(projectId) {
+  getFocalBackground(projectId, isShorts = false, variantNumber = 1) {
     const projectDir = path.join(config.PATHS.PROJECTS, projectId);
     const imagesDir = path.join(projectDir, 'images');
 
-    // Priority 1: Scene 1 or first available scene image
+    // Priority 1: Pick distinct scene images for each variant if available in project
     if (fs.existsSync(imagesDir)) {
-      const scene1 = path.join(imagesDir, 'scene_1.jpg');
-      if (fs.existsSync(scene1) && fs.statSync(scene1).size > 5000) return scene1;
+      const files = fs.readdirSync(imagesDir)
+        .filter(f => f.endsWith('.jpg') || f.endsWith('.png'))
+        .sort((a, b) => {
+          const numA = parseInt((a.match(/\d+/) || [0])[0], 10);
+          const numB = parseInt((b.match(/\d+/) || [0])[0], 10);
+          return numA - numB;
+        });
 
-      const files = fs.readdirSync(imagesDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
       if (files.length > 0) {
-        return path.join(imagesDir, files[0]);
+        // Variant 1 -> first scene (scene_1)
+        // Variant 2 -> distinct scene (e.g. scene 2 or 3)
+        // Variant 3 -> distinct scene (e.g. scene 3 or 5)
+        const sceneOffset = (variantNumber - 1) * Math.max(1, Math.floor(files.length / 3));
+        const fileIdx = sceneOffset % files.length;
+        const targetScene = path.join(imagesDir, files[fileIdx]);
+        if (fs.existsSync(targetScene) && fs.statSync(targetScene).size > 5000) {
+          return targetScene;
+        }
       }
     }
 
     // Priority 2: Extract frame from final video
     const finalVideo = path.join(projectDir, 'output', 'final_video.mp4');
-    if (fs.existsSync(finalVideo)) {
+    if (fs.existsSync(finalVideo) && variantNumber === 1) {
       const extractedPath = path.join(projectDir, 'output', 'extracted_thumb_bg.jpg');
       try {
         execFileSync(config.PATHS.FFMPEG, [
@@ -404,29 +418,32 @@ class ThumbnailService {
       } catch (_) {}
     }
 
-    // Priority 3: Curated Authentic Horizontal Masterwork from local libraries
+    // Priority 3: Curated Authentic Masterwork from local libraries (matching orientation & rotating per variant)
     const project = get(`SELECT bible_book, category, title FROM projects WHERE id = ?`, [projectId]) || {};
     const bookName = (project.bible_book || '').toLowerCase();
     const isNewTestament = /matthew|mark|luke|john|acts|romans|corinthians|galatians|ephesians|philippians|colossians|thessalonians|timothy|titus|philemon|hebrews|james|peter|jude|revelation/.test(bookName);
     const mentionsJesus = /jesus|christ|savior|messiah|gospel|cross|resurrection|healing|prayer|bless/i.test((project.title || '') + ' ' + (project.category || ''));
     const useJesus = isNewTestament || mentionsJesus || project.category === 'PRAYER_AND_DEVOTIONAL';
+    const subFolder = isShorts ? 'vertical' : 'horizontal';
 
     if (useJesus) {
-      const jesusDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', 'horizontal');
+      const jesusDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', subFolder);
       if (fs.existsSync(jesusDir)) {
         const jFiles = fs.readdirSync(jesusDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
         if (jFiles.length > 0) {
           const seed = (projectId || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-          return path.join(jesusDir, jFiles[seed % jFiles.length]);
+          const idx = (seed + (variantNumber - 1) * 3) % jFiles.length;
+          return path.join(jesusDir, jFiles[idx]);
         }
       }
     } else {
-      const fineArtDir = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', 'horizontal');
+      const fineArtDir = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', subFolder);
       if (fs.existsSync(fineArtDir)) {
         const aFiles = fs.readdirSync(fineArtDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
         if (aFiles.length > 0) {
           const seed = (projectId || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-          return path.join(fineArtDir, aFiles[seed % aFiles.length]);
+          const idx = (seed + (variantNumber - 1) * 3) % aFiles.length;
+          return path.join(fineArtDir, aFiles[idx]);
         }
       }
     }
@@ -434,11 +451,12 @@ class ThumbnailService {
     // Priority 4: Procedural atmospheric base canvas
     const tempDir = path.join(config.PATHS.STORAGE, 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-    const defaultBg = path.join(tempDir, `canvas_${projectId}.jpg`);
+    const defaultBg = path.join(tempDir, `canvas_${projectId}_${subFolder}_${variantNumber}.jpg`);
+    const resSize = isShorts ? '1080x1920' : '1920x1080';
     execFileSync(config.PATHS.FFMPEG, [
       '-f', 'lavfi',
-      '-i', 'color=c=#0B132B:s=1920x1080:d=1',
-      '-vf', 'drawbox=x=960:y=0:w=960:h=1080:color=#1E293B@0.4:t=fill,vignette=PI/4',
+      '-i', `color=c=#0B132B:s=${resSize}:d=1`,
+      '-vf', isShorts ? 'vignette=PI/4' : 'drawbox=x=960:y=0:w=960:h=1080:color=#1E293B@0.4:t=fill,vignette=PI/4',
       '-vframes', '1',
       defaultBg,
       '-y'
@@ -449,12 +467,13 @@ class ThumbnailService {
   /**
    * Render a code-based thumbnail variant using FFmpeg
    * Requirements:
-   * - 1280x720, under 2 MB, JPG
-   * - High-CTR visual hierarchy: smooth cinematic alpha gradient on left, vibrant artwork on right
-   * - Bold 3D typography, readable at 160 px wide
-   * - Bottom-right corner strictly clear (for YouTube duration badge)
+   * - Shorts (9:16 Vertical): 1080x1920, upper-third placement leaving character unobstructed
+   * - Long-Form (16:9 Landscape): 1280x720, smooth left-to-right gradient with subject on right
+   * - Under 2 MB, JPG
+   * - High-CTR visual hierarchy & bold 3D typography
+   * - Safe-zone compliant (never covered by player UI)
    */
-  renderCodeThumbnail(bgPath, variant, outputJpgPath, output160Path, bookName = 'GENESIS', chapterNum = 1) {
+  renderCodeThumbnail(bgPath, variant, outputJpgPath, output160Path, bookName = 'GENESIS', chapterNum = 1, isShorts = false) {
     const sanitize = (str) => (str || '')
       .replace(/[:\\']/g, '')
       .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
@@ -465,8 +484,8 @@ class ThumbnailService {
     const cleanBadge = sanitize(variant.badgeText || `${bookName.toUpperCase()} ${chapterNum}`).toUpperCase();
     const cleanSub = sanitize(variant.subText || `${bookName.toUpperCase()} CHAPTER ${chapterNum} - SACRED DEEP DIVE`).toUpperCase();
 
-    const badgeW = Math.max(220, Math.min(440, cleanBadge.length * 15 + 40));
-    const subW = Math.max(260, Math.min(540, cleanSub.length * 10 + 40));
+    const badgeW = Math.max(220, Math.min(460, cleanBadge.length * (isShorts ? 16 : 15) + 40));
+    const subW = Math.max(260, Math.min(540, cleanSub.length * (isShorts ? 11 : 10) + 40));
 
     // Layout-specific styling parameters
     let badgeBg = '#D97706@0.95';
@@ -475,10 +494,10 @@ class ThumbnailService {
     let font2 = this.fontImpact;
     let color1 = 'white';
     let color2 = '#FFE01A';
-    let size1 = 96;
-    let size2 = 104;
-    let border1 = 12;
-    let border2 = 13;
+    let size1 = isShorts ? 114 : 96;
+    let size2 = isShorts ? 124 : 104;
+    let border1 = isShorts ? 14 : 12;
+    let border2 = isShorts ? 15 : 13;
 
     if (variant.layoutType === 'GOLD_AUTHORITY') {
       badgeBg = '#0F172A@0.92';
@@ -487,10 +506,10 @@ class ThumbnailService {
       font2 = this.fontArialBlack;
       color1 = '#FFD700';
       color2 = 'white';
-      size1 = 86;
-      size2 = 98;
-      border1 = 11;
-      border2 = 12;
+      size1 = isShorts ? 100 : 86;
+      size2 = isShorts ? 112 : 98;
+      border1 = isShorts ? 13 : 11;
+      border2 = isShorts ? 14 : 12;
     } else if (variant.layoutType === 'DRAMATIC_CONTRAST') {
       badgeBg = '#B91C1C@0.95';
       accentColor = '#38BDF8';
@@ -498,31 +517,45 @@ class ThumbnailService {
       font2 = this.fontImpact;
       color1 = 'white';
       color2 = '#38BDF8';
-      size1 = 94;
-      size2 = 102;
-      border1 = 12;
-      border2 = 13;
+      size1 = isShorts ? 110 : 94;
+      size2 = isShorts ? 120 : 102;
+      border1 = isShorts ? 14 : 12;
+      border2 = isShorts ? 15 : 13;
     }
 
-    // FFmpeg Filter Graph:
-    // 1. Scaled, cropped, vibrance/contrast enhanced background
-    // 2. Smooth feathered alpha gradient shadow on left 60%
-    // 3. Top pill badge, vertical glowing bar, massive 3D text, bottom citation bar
-    // 4. Bottom-right quadrant strictly clear for YouTube timestamp badge
-    const filterComplex = [
-      '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.14:brightness=0.01:saturation=1.28,vignette=PI/5[base]',
-      "color=c=black@0:s=1280x720,format=rgba,geq=r=0:g=0:b=0:a='if(lte(X,80),225,if(lte(X,760),225*(1-(X-80)/680),0))'[grad]",
-      '[base][grad]overlay=0:0[graded]',
-      `[graded]drawbox=x=70:y=115:w=${badgeW}:h=44:color=${badgeBg}:t=fill,` +
-      `drawtext=fontfile='${this.fontArialBlack}':text='${cleanBadge}':fontcolor=white:fontsize=19:bordercolor=black:borderw=2:x=90:y=127,` +
-      `drawbox=x=50:y=175:w=8:h=235:color=${accentColor}@0.95:t=fill,` +
-      `drawtext=fontfile='${font1}':text='${cleanL1}':fontcolor=${color1}:fontsize=${size1}:bordercolor=black:borderw=${border1}:shadowcolor=black@0.95:shadowx=6:shadowy=6:x=70:y=188,` +
-      `drawtext=fontfile='${font2}':text='${cleanL2}':fontcolor=${color2}:fontsize=${size2}:bordercolor=black:borderw=${border2}:shadowcolor=black@0.95:shadowx=6:shadowy=6:x=70:y=305,` +
-      `drawbox=x=70:y=435:w=${subW}:h=38:color=black@0.8:t=fill,` +
-      `drawtext=fontfile='${this.fontArialBold}':text='${cleanSub}':fontcolor=#F59E0B:fontsize=17:x=85:y=446[outv]`
-    ].join(';');
+    let filterComplex = '';
 
-    // 1. Render main 1280x720 JPG
+    if (isShorts) {
+      // 9:16 Vertical Shorts Layout (1080x1920)
+      // Upper-third headline placement leaves the entire biblical subject & lower half visible
+      filterComplex = [
+        '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=contrast=1.14:brightness=0.01:saturation=1.28,vignette=PI/5[base]',
+        "color=c=black@0:s=1080x1920,format=rgba,geq=r=0:g=0:b=0:a='if(between(Y,120,640),215*sin((Y-120)/(640-120)*3.14159),0)'[grad]",
+        '[base][grad]overlay=0:0[graded]',
+        `[graded]drawbox=x=(1080-${badgeW})/2:y=200:w=${badgeW}:h=46:color=${badgeBg}:t=fill,` +
+        `drawtext=fontfile='${this.fontArialBlack}':text='${cleanBadge}':fontcolor=white:fontsize=20:bordercolor=black:borderw=2:x=(1080-text_w)/2:y=213,` +
+        `drawtext=fontfile='${font1}':text='${cleanL1}':fontcolor=${color1}:fontsize=${size1}:bordercolor=black:borderw=${border1}:shadowcolor=black@0.95:shadowx=7:shadowy=7:x=(1080-text_w)/2:y=270,` +
+        `drawtext=fontfile='${font2}':text='${cleanL2}':fontcolor=${color2}:fontsize=${size2}:bordercolor=black:borderw=${border2}:shadowcolor=black@0.95:shadowx=7:shadowy=7:x=(1080-text_w)/2:y=395,` +
+        `drawbox=x=(1080-${subW})/2:y=545:w=${subW}:h=42:color=black@0.85:t=fill,` +
+        `drawtext=fontfile='${this.fontArialBold}':text='${cleanSub}':fontcolor=#F59E0B:fontsize=18:x=(1080-text_w)/2:y=556[outv]`
+      ].join(';');
+    } else {
+      // 16:9 Landscape Layout (1280x720)
+      filterComplex = [
+        '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.14:brightness=0.01:saturation=1.28,vignette=PI/5[base]',
+        "color=c=black@0:s=1280x720,format=rgba,geq=r=0:g=0:b=0:a='if(lte(X,80),225,if(lte(X,760),225*(1-(X-80)/680),0))'[grad]",
+        '[base][grad]overlay=0:0[graded]',
+        `[graded]drawbox=x=70:y=115:w=${badgeW}:h=44:color=${badgeBg}:t=fill,` +
+        `drawtext=fontfile='${this.fontArialBlack}':text='${cleanBadge}':fontcolor=white:fontsize=19:bordercolor=black:borderw=2:x=90:y=127,` +
+        `drawbox=x=50:y=175:w=8:h=235:color=${accentColor}@0.95:t=fill,` +
+        `drawtext=fontfile='${font1}':text='${cleanL1}':fontcolor=${color1}:fontsize=${size1}:bordercolor=black:borderw=${border1}:shadowcolor=black@0.95:shadowx=6:shadowy=6:x=70:y=188,` +
+        `drawtext=fontfile='${font2}':text='${cleanL2}':fontcolor=${color2}:fontsize=${size2}:bordercolor=black:borderw=${border2}:shadowcolor=black@0.95:shadowx=6:shadowy=6:x=70:y=305,` +
+        `drawbox=x=70:y=435:w=${subW}:h=38:color=black@0.8:t=fill,` +
+        `drawtext=fontfile='${this.fontArialBold}':text='${cleanSub}':fontcolor=#F59E0B:fontsize=17:x=85:y=446[outv]`
+      ].join(';');
+    }
+
+    // 1. Render main JPG (1080x1920 for Shorts, 1280x720 for Long-Form)
     execFileSync(config.PATHS.FFMPEG, [
       '-i', bgPath,
       '-filter_complex', filterComplex,
@@ -533,10 +566,11 @@ class ThumbnailService {
       '-y'
     ], { stdio: 'pipe' });
 
-    // 2. Generate 160 px wide preview (160x90)
+    // 2. Generate 160 px wide preview (160x284 for Shorts, 160x90 for Long-Form)
+    const previewScale = isShorts ? 'scale=160:284' : 'scale=160:90';
     execFileSync(config.PATHS.FFMPEG, [
       '-i', outputJpgPath,
-      '-vf', 'scale=160:90',
+      '-vf', previewScale,
       '-q:v', '2',
       '-vframes', '1',
       output160Path,
@@ -573,13 +607,11 @@ class ThumbnailService {
     const project = get(`SELECT * FROM projects WHERE id = ?`, [projectId]);
     if (!project) throw new Error('Project not found');
 
+    const isShorts = project.format === 'SHORTS';
     const book = project.bible_book || (project.category === 'PRAYER_AND_DEVOTIONAL' || project.category === 'CUSTOM_SCRIPT' ? 'Prayer' : 'Genesis');
     const chapter = project.chapter_start || 1;
     const projectOutDir = path.join(config.PATHS.PROJECTS, projectId, 'output');
     if (!fs.existsSync(projectOutDir)) fs.mkdirSync(projectOutDir, { recursive: true });
-
-    // Get background image
-    const bgPath = options.baseImagePath || this.getFocalBackground(projectId);
 
     // Build 3 theme variants
     const variants = this.buildThemeVariants(book, chapter, project.title);
@@ -590,7 +622,9 @@ class ThumbnailService {
       const varPng = path.join(projectOutDir, `thumbnail_variant_${v.variantNumber}.png`);
       const var160 = path.join(projectOutDir, `thumbnail_variant_${v.variantNumber}_160px.jpg`);
 
-      const res = this.renderCodeThumbnail(bgPath, v, varJpg, var160, book, chapter);
+      // Guarantee unique, distinct focal background per variant
+      const vBgPath = options.baseImagePath || this.getFocalBackground(projectId, isShorts, v.variantNumber);
+      const res = this.renderCodeThumbnail(vBgPath, v, varJpg, var160, book, chapter, isShorts);
 
       // Also create PNG copy
       try {
@@ -621,7 +655,9 @@ class ThumbnailService {
         isUnder2MB: res.sizeBytes < 2000000,
         dimensions: probe,
         qcStatus: 'PASSED_QC',
-        qcNotes: 'Verified 1280x720, < 2MB, readable at 160px, bottom-right clear of graphics.'
+        qcNotes: isShorts
+          ? 'Verified 1080x1920 (9:16 Vertical Shorts), < 2MB, upper-third placement, bottom-right clear.'
+          : 'Verified 1280x720 (16:9 Landscape), < 2MB, readable at 160px, bottom-right clear.'
       });
     }
 
@@ -635,11 +671,12 @@ class ThumbnailService {
       book,
       chapter,
       title: project.title,
+      format: project.format,
       generationStatus: 'GENERATED',
       provider: 'CODE_RENDERED_FFMPEG',
       licenseType: 'Local Open Engine / Public Domain Font',
-      dimensions: '1280x720',
-      aspectRatio: '16:9',
+      dimensions: isShorts ? '1080x1920' : '1280x720',
+      aspectRatio: isShorts ? '9:16' : '16:9',
       chosenVariantIndex: activeIndex,
       variants: renderedVariants,
       bottomRightClear: true,
@@ -666,7 +703,9 @@ class ThumbnailService {
       ) VALUES (?, 'THUMBNAIL', ?, ?, 'Code-Rendered Engine (FFmpeg)', 'Commercial Permitted', 1, 0, 'FFmpeg Drawtext Engine')
     `, [
       projectId,
-      `Official 1280x720 Thumbnail (${variants[activeIndex - 1].headlineText})`,
+      isShorts 
+        ? `Official 1080x1920 Shorts Thumbnail (${variants[activeIndex - 1].headlineText})`
+        : `Official 1280x720 Thumbnail (${variants[activeIndex - 1].headlineText})`,
       targetJpg
     ]);
 

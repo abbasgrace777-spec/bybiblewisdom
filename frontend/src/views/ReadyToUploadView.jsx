@@ -35,6 +35,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
   const [modalEditMode, setModalEditMode] = useState(false);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const isShorts = selectedProject?.format === 'SHORTS' || packageData?.project?.format === 'SHORTS';
 
   async function handleSelectVariant(variantNum) {
     if (!selectedProjectId) return;
@@ -338,7 +339,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
                     <ImageIcon className="w-4 h-4 text-amber-400" />
-                    <span>Active YouTube Thumbnail (1280x720)</span>
+                    <span>Active YouTube Thumbnail ({isShorts ? '9:16 Vertical • 1080x1920' : '16:9 Landscape • 1280x720'})</span>
                   </div>
                   <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
                     Active: Variant {packageData.thumbnail?.chosenVariantIndex || 1}
@@ -347,7 +348,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
 
                 {packageData.thumbnail?.available ? (
                   <div className="space-y-3">
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 shadow-lg relative group">
+                    <div className={`${isShorts ? 'aspect-[9/16] max-w-[280px] mx-auto' : 'aspect-video'} bg-black rounded-xl overflow-hidden border border-slate-800 shadow-lg relative group`}>
                       <img
                         src={packageData.thumbnail?.downloadUrl}
                         alt="Active Thumbnail"
@@ -504,7 +505,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
                   <ol className="text-xs text-slate-400 space-y-1 list-decimal list-inside leading-relaxed">
                     <li>Download or drag <strong className="text-slate-200">Final_Video.mp4</strong> into <a href="https://studio.youtube.com" target="_blank" rel="noreferrer" className="text-amber-400 underline">YouTube Studio</a>.</li>
                     <li>Paste the <strong>Title</strong>, <strong>Description</strong>, and <strong>Tags</strong> with the copy buttons above.</li>
-                    <li>Upload the 1280x720 <strong>Thumbnail</strong>.</li>
+                    <li>Upload the {isShorts ? '9:16 (1080x1920)' : '1280x720'} <strong>Thumbnail</strong>.</li>
                     <li>No audio copyright claims will be triggered (pure spoken voice, 0 background music).</li>
                     <li>Safe to publish publicly immediately.</li>
                   </ol>
@@ -526,7 +527,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
                 </p>
               </div>
               <span className="text-[11px] font-mono text-slate-400">
-                Brand Style: Bold White + Thin Gold Outline • 1280x720
+                Brand Style: Bold White + Thin Gold Outline • {isShorts ? '9:16 Vertical • 1080x1920' : '16:9 Landscape • 1280x720'}
               </span>
             </div>
 
@@ -569,8 +570,8 @@ export default function ReadyToUploadView({ setActiveTab }) {
                         )}
                       </div>
 
-                      {/* 16:9 Thumbnail Image */}
-                      <div className="aspect-video bg-black rounded-lg overflow-hidden border border-slate-800 relative">
+                      {/* Thumbnail Image */}
+                      <div className={`${isShorts ? 'aspect-[9/16] max-h-[360px] mx-auto' : 'aspect-video'} bg-black rounded-lg overflow-hidden border border-slate-800 relative`}>
                         {v.available ? (
                           <img
                             src={v.url}
@@ -594,7 +595,7 @@ export default function ReadyToUploadView({ setActiveTab }) {
                           </span>
                         </div>
                         {v.url160px ? (
-                          <div className="w-40 h-[90px] mx-auto bg-black rounded overflow-hidden border border-slate-700">
+                          <div className={`${isShorts ? 'w-[90px] h-[160px]' : 'w-40 h-[90px]'} mx-auto bg-black rounded overflow-hidden border border-slate-700`}>
                             <img src={v.url160px} alt="160px" className="w-full h-full object-cover" />
                           </div>
                         ) : (

@@ -811,6 +811,7 @@ router.get('/projects/:id/ready-to-upload', async (req, res) => {
           id: project.id,
           title: project.title,
           category: project.category,
+          format: project.format || 'LONG_FORM',
           status: project.status,
           duration: project.duration || 649,
           bible_book: project.bible_book,
@@ -832,7 +833,10 @@ router.get('/projects/:id/ready-to-upload', async (req, res) => {
           variants: ideogramService.getThumbnailData(projectId)?.variants || [],
           chosenVariantIndex: ideogramService.getThumbnailData(projectId)?.chosenVariantIndex || 1,
           generationStatus: ideogramService.getThumbnailData(projectId)?.generationStatus || 'NOT_CONFIGURED',
-          ideogramPrompt: ideogramService.getThumbnailData(projectId)?.ideogramPrompt || ''
+          ideogramPrompt: ideogramService.getThumbnailData(projectId)?.ideogramPrompt || '',
+          dimensions: ideogramService.getThumbnailData(projectId)?.dimensions || (project.format === 'SHORTS' ? '1080x1920' : '1280x720'),
+          aspectRatio: ideogramService.getThumbnailData(projectId)?.aspectRatio || (project.format === 'SHORTS' ? '9:16' : '16:9'),
+          isShorts: project.format === 'SHORTS'
         },
         seo: {
           title: seo?.video_title || `${project.title} | ByBibleWisdom`,
