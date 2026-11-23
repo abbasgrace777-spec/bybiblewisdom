@@ -313,12 +313,16 @@ def generate_srt_file(cues: list, out_path: str):
         f.write("\n".join(lines).strip() + "\n")
 
 def generate_ass_file(cues: list, out_path: str, format_type="SHORTS"):
-    """Write standard ASS file with Biblical aesthetic."""
+    """Write standard ASS file with Biblical aesthetic and professional safe-zone margins."""
     is_shorts = (format_type == "SHORTS")
     play_res_x = 1080 if is_shorts else 1920
     play_res_y = 1920 if is_shorts else 1080
-    font_size = 56 if is_shorts else 48
-    margin_v = 240 if is_shorts else 90
+    font_size = 52 if is_shorts else 40
+    # Safe zone: 680px for Shorts (safely above YouTube Shorts UI overlays), 80px for horizontal
+    margin_v = 680 if is_shorts else 80
+    outline = 3.8 if is_shorts else 2.8
+    shadow = 2.0 if is_shorts else 1.8
+    spacing = 0.6 if is_shorts else 0.4
 
     ass_header = f"""[Script Info]
 Title: ByBibleWisdom Verified Subtitles
@@ -327,22 +331,28 @@ WrapStyle: 0
 PlayResX: {play_res_x}
 PlayResY: {play_res_y}
 ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,{font_size},&H00FFFFFF,&H000000FF,&H00090D16,&H80000000,-1,0,0,0,100,100,0.5,0,1,3.5,1.5,2,40,40,{margin_v},1
+Style: Default,Trebuchet MS,{font_size},&H00FFFFFF,&H000000FF,&H000B0E14,&H80000000,-1,0,0,0,100,100,{spacing},0,1,{outline},{shadow},2,40,40,{margin_v},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     events = []
-    # Biblical keywords highlighted in gold in ASS
+    # Biblical and prayer keywords highlighted in luminous warm gold (&H001FD8FF&)
     gold_words = {
         'god', 'lord', 'jesus', 'christ', 'spirit', 'holy', 'beginning', 'created', 'creation',
         'heaven', 'heavens', 'earth', 'light', 'darkness', 'waters', 'firmament', 'seas',
         'morning', 'evening', 'day', 'night', 'sun', 'moon', 'stars', 'living', 'creatures',
         'blessed', 'image', 'likeness', 'dominion', 'rested', 'sabbath', 'faith', 'glory',
-        'grace', 'truth', 'life', 'eternal', 'savior', 'covenant', 'wisdom', 'righteousness'
+        'grace', 'truth', 'life', 'eternal', 'savior', 'covenant', 'wisdom', 'righteousness',
+        'mercy', 'prayer', 'shepherd', 'salvation', 'peace', 'blessing', 'amen', 'prophet',
+        'kingdom', 'messiah', 'psalm', 'genesis', 'gospel', 'almighty', 'father',
+        'commandment', 'commandments', 'word', 'testament', 'sacred', 'resurrection', 'cross',
+        'redemption', 'hope', 'soul', 'heal', 'heals', 'healing', 'strength', 'comfort',
+        'rest', 'body', 'heart', 'recovery', 'mighty', 'praise', 'trust', 'miracle', 'miracles'
     }
 
     for cue in cues:
@@ -358,7 +368,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             for t in tokens:
                 clean_t = re.sub(r"[^a-zA-Z]", "", t).lower()
                 if clean_t in gold_words:
-                    styled_tokens.append(r"{\c&H002BD7FF&}" + t + r"{\c&H00FFFFFF&}")
+                    styled_tokens.append(r"{\c&H001FD8FF&}" + t + r"{\c&H00FFFFFF&}")
                 else:
                     styled_tokens.append(t)
             formatted_lines.append(" ".join(styled_tokens))

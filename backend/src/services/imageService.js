@@ -83,9 +83,12 @@ class ImageService {
     // 6. Fixed Natural Photographic Style Line (No AI painting / No CGI)
     const styleLine = `National Geographic documentary still, authentic cinematic photography shot on 35mm film, natural directional sunlight, raw organic textures of limestone, ancient olive wood, and unbleached linen, authentic historical antiquity, realistic physical world, sharp authentic photography, ${aspect}`;
 
-    // 7. Core Central Figure: Dignified Portrayal of Jesus Christ
-    // User Requirement: Feature Jesus Christ images as central subject (not empty nature/landscape)
-    const jesusClause = 'Authentic documentary portrayal of Jesus Christ, dignified 1st century Galilean Jewish appearance, unadorned unbleached linen mantle, gentle compassionate gaze, authentic historical antiquity. ';
+    // 7. Core Central Figure: Dignified Portrayal of Jesus Christ ONLY when script/book is New Testament or specifically mentions Jesus
+    const isNewTestament = /matthew|mark|luke|john|acts|romans|corinthians|galatians|ephesians|philippians|colossians|thessalonians|timothy|titus|philemon|hebrews|james|peter|jude|revelation/i.test(book);
+    const mentionsJesus = /jesus|christ|savior|messiah|gospel|cross|resurrection|healing|prayer/i.test(rawSubject + ' ' + (project.category || ''));
+    const jesusClause = (isNewTestament || mentionsJesus)
+      ? 'Authentic documentary portrayal of Jesus Christ, dignified 1st century Galilean Jewish appearance, unadorned unbleached linen mantle, gentle compassionate gaze, authentic historical antiquity. '
+      : '';
 
     // 8. Strict Negative Avoid List (Zero AI illustration / Zero digital painting / Zero CGI)
     const avoidList = 'painting, oil painting, acrylic, digital art, illustration, cartoon, anime, 3d render, cgi, plastic sheen, airbrushed skin, synthetic smoothing, oversaturated colors, glowing neon, modern clothing, wristwatches, eyeglasses, automobiles, modern buildings, text, typography, subtitles, watermarks, logos, signatures, distorted anatomy, extra fingers';
@@ -239,8 +242,9 @@ class ImageService {
       }
     }
 
-    // Priority 2: Diverse rotation through Jesus library so every scene displays Jesus without consecutive repetition
-    const idx = (chapter * 3 + order - 1) % availableFiles.length;
+    // Priority 2: Diverse rotation through Jesus library with unique project seed so different videos get different portraits
+    const projectSeed = (project.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const idx = (projectSeed + chapter * 3 + order - 1) % availableFiles.length;
     return path.join(jesusLibDir, availableFiles[idx]);
   }
 
@@ -266,7 +270,6 @@ class ImageService {
       { keywords: ['river', 'stream', 'flow', 'fountain', 'jordan', 'spring'], photo: 'peaceful_flowing_river.jpg' },
       { keywords: ['ocean', 'sea', 'waters', 'deep', 'wave', 'fish', 'marine', 'current'], photo: 'tranquil_ocean_waters.jpg' },
       { keywords: ['flower', 'flora', 'grass', 'field', 'bloom', 'earth'], photo: 'wildflowers_field_flourishing.jpg' },
-      { keywords: ['olive', 'tree', 'grove', 'branch', 'vine', 'garden', 'fruit'], photo: 'ancient_olive_tree_hill.jpg' },
       { keywords: ['star', 'stars', 'night', 'sky', 'heavens', 'moon', 'constellation', 'abraham'], photo: 'starry_night_abraham.jpg' },
       { keywords: ['light', 'sunbeam', 'glory', 'radiant', 'shine', 'beam'], photo: 'sunbeams_celestial_light.jpg' },
       { keywords: ['dawn', 'morning', 'sunrise', 'beginning', 'create', 'creation', 'heavens and earth'], photo: 'creation_dawn_mountains.jpg' },
@@ -287,9 +290,76 @@ class ImageService {
       }
     }
 
-    // Hash offset fallback so different scenes & chapters get different diverse natural photos
-    const idx = (chapter * 3 + order - 1) % availableFiles.length;
+    // Unique project seed offset so different videos get different diverse natural photos
+    const projectSeed = (project.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const idx = (projectSeed + chapter * 5 + order - 1) % availableFiles.length;
     return path.join(naturalLibDir, availableFiles[idx]);
+  }
+
+  /**
+   * Match classical biblical fine art from library with unique project seed
+   */
+  matchFineArtForScene(seg, project = {}, isShorts = false) {
+    const fineArtDir = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', isShorts ? 'vertical' : 'horizontal');
+    if (!fs.existsSync(fineArtDir)) return null;
+
+    const availableFiles = fs.readdirSync(fineArtDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+    if (availableFiles.length === 0) return null;
+
+    const chapter = project.chapter_start || 1;
+    const order = seg.segment_order || 1;
+    const projectSeed = (project.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const idx = (projectSeed + chapter * 7 + order - 1) % availableFiles.length;
+    return path.join(fineArtDir, availableFiles[idx]);
+  }
+
+  /**
+   * Dynamically fetch script-grounded public domain biblical fine art from Wikimedia Commons
+   */
+  async fetchScriptAccurateArt(queryStr, isShorts = false) {
+    try {
+      const cleanQuery = queryStr.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!cleanQuery || cleanQuery.length < 3) return null;
+
+      const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrnamespace=6&gsrlimit=5&prop=imageinfo&iiprop=url|size&format=json`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+
+      const res = await fetch(apiUrl, {
+        headers: { 'User-Agent': 'ByBibleWisdomStudio/1.0 (contact@bybiblewisdom.org)' },
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data?.query?.pages) return null;
+
+      const pages = Object.values(data.query.pages);
+      const minDimension = isShorts ? 600 : 800;
+      const valid = pages.find(p => {
+        const info = p.imageinfo?.[0];
+        if (!info || !info.url) return false;
+        const ext = path.extname(info.url.split('?')[0]).toLowerCase();
+        if (!['.jpg', '.jpeg', '.png'].includes(ext)) return false;
+        return (info.width >= minDimension && info.height >= minDimension);
+      });
+
+      if (!valid || !valid.imageinfo?.[0]?.url) return null;
+
+      const imgUrl = valid.imageinfo[0].url;
+      const imgRes = await fetch(imgUrl, {
+        headers: { 'User-Agent': 'ByBibleWisdomStudio/1.0 (contact@bybiblewisdom.org)' }
+      });
+      if (!imgRes.ok) return null;
+
+      const buffer = Buffer.from(await imgRes.arrayBuffer());
+      if (buffer.length < 25000) return null; // Reject tiny corrupt thumbnails
+      return { buffer, title: valid.title, url: imgUrl };
+    } catch (_) {
+      return null;
+    }
   }
 
   /**
@@ -353,34 +423,78 @@ class ImageService {
           }
         }
 
-        // Primary Imagery Selection: Context-Aware Matching from Authentic Jesus Photo Archive
-        // User Requirement: Videos feature Jesus Christ images rather than empty nature/landscape
-        if (!isReady) {
-          let selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts);
-          if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
-            // Secondary fallback to natural photography if Jesus photo is missing
-            selectedPhotoPath = this.matchNaturalPhotoForScene(seg, project, isShorts);
-          }
-          if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
-            // Tertiary fallback to fine art
-            const libraryDir = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', isShorts ? 'vertical' : 'horizontal');
-            const maxLibCount = isShorts ? 7 : 15;
-            selectedPhotoPath = path.join(libraryDir, `scene_${((seg.segment_order - 1) % maxLibCount) + 1}.jpg`);
-          }
+        // Script-Accurate Image Selection:
+        // 1. Determine whether this scene specifically speaks of Jesus Christ or Old Testament/Biblical Narrative
+        const sceneText = ((seg.narration_text || '') + ' ' + (seg.image_prompt || '') + ' ' + (seg.visual_description || '')).toLowerCase();
+        const bookName = (project.bible_book || '').toLowerCase();
+        const isNewTestament = /matthew|mark|luke|john|acts|romans|corinthians|galatians|ephesians|philippians|colossians|thessalonians|timothy|titus|philemon|hebrews|james|peter|jude|revelation/.test(bookName);
+        const mentionsJesus = /jesus|christ|savior|messiah|gospel|cross|resurrection|healing|prayer|bless/.test(sceneText + ' ' + (project.category || ''));
+        const useJesusLibrary = (isNewTestament || mentionsJesus || project.category === 'PRAYER_AND_DEVOTIONAL');
 
-          if (selectedPhotoPath && fs.existsSync(selectedPhotoPath)) {
-            try {
-              fs.copyFileSync(selectedPhotoPath, targetPath);
-              run(`UPDATE script_segments SET image_status = 'AI_GENERATED', engine_used = 'Authentic Jesus Imagery' WHERE id = ?`, [seg.id]);
+        // Step 1: Attempt Dynamic Online Public Domain Artwork Fetching matching the exact scene text
+        if (!isReady) {
+          try {
+            const queryNoun = (seg.visual_description || seg.narration_text || '')
+              .replace(/welcome to bybiblewisdom.*?\. /i, '')
+              .replace(/[\r\n]+/g, ' ')
+              .trim()
+              .split(/\s+/)
+              .slice(0, 4)
+              .join(' ');
+
+            const searchSubject = project.bible_book 
+              ? `${project.bible_book} ${project.chapter_start || 1} ${queryNoun}`
+              : (useJesusLibrary ? `Jesus Christ ${queryNoun}` : `Biblical ${queryNoun}`);
+
+            const dynamicArt = await this.fetchScriptAccurateArt(searchSubject, isShorts);
+            if (dynamicArt && dynamicArt.buffer) {
+              fs.writeFileSync(targetPath, dynamicArt.buffer);
               const check = this.validateImageDimensions(targetPath, isShorts);
               if (check.valid) {
                 isReady = true;
                 dimInfo = check;
                 seg.image_status = 'AI_GENERATED';
-                seg.engine_used = 'Authentic Jesus Imagery';
+                const artTitle = (dynamicArt.title || 'Biblical Masterpiece').replace(/^File:/i, '').replace(/\.[^.]+$/, '').slice(0, 40);
+                seg.engine_used = `Script-Grounded Biblical Art (${artTitle})`;
+                run(`UPDATE script_segments SET media_path = ?, media_type = 'IMAGE', image_status = 'AI_GENERATED', engine_used = ? WHERE id = ?`, 
+                  [targetPath, seg.engine_used, seg.id]);
+              }
+            }
+          } catch (_) {}
+        }
+
+        // Step 2: Context-Aware Diverse Local Library Matching (Never duplicates across videos)
+        if (!isReady) {
+          let selectedPhotoPath = null;
+          let engineLabel = 'Authentic Biblical Archive';
+
+          if (useJesusLibrary) {
+            selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts);
+            engineLabel = 'Authentic Jesus Imagery';
+          } else {
+            // Old Testament / Nature / Historical Story: Pick from natural photography or classical fine art
+            selectedPhotoPath = this.matchNaturalPhotoForScene(seg, project, isShorts);
+            engineLabel = 'Authentic Biblical Archaeology & Nature';
+            if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
+              selectedPhotoPath = this.matchFineArtForScene(seg, project, isShorts);
+              engineLabel = 'Classical Biblical Fine Art';
+            }
+          }
+
+          if (selectedPhotoPath && fs.existsSync(selectedPhotoPath)) {
+            try {
+              fs.copyFileSync(selectedPhotoPath, targetPath);
+              const check = this.validateImageDimensions(targetPath, isShorts);
+              if (check.valid) {
+                isReady = true;
+                dimInfo = check;
+                seg.image_status = 'AI_GENERATED';
+                seg.engine_used = engineLabel;
+                run(`UPDATE script_segments SET media_path = ?, media_type = 'IMAGE', image_status = 'AI_GENERATED', engine_used = ? WHERE id = ?`, 
+                  [targetPath, engineLabel, seg.id]);
               }
             } catch (e) {
-              console.warn(`[ImageService] Auto-populate from Jesus photo library failed:`, e.message);
+              console.warn(`[ImageService] Auto-populate from photo library failed:`, e.message);
             }
           }
         }

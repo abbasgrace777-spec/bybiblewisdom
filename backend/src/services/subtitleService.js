@@ -14,7 +14,8 @@ const BIBLICAL_KEYWORDS = new Set([
   'mercy', 'prayer', 'shepherd', 'salvation', 'peace', 'blessing', 'amen', 'prophet',
   'kingdom', 'messiah', 'psalm', 'genesis', 'gospel', 'almighty', 'father',
   'commandment', 'commandments', 'word', 'testament', 'sacred', 'resurrection', 'cross',
-  'redemption', 'hope', 'soul'
+  'redemption', 'hope', 'soul', 'heal', 'heals', 'healing', 'strength', 'comfort',
+  'rest', 'body', 'heart', 'recovery', 'mighty', 'praise', 'trust', 'miracle', 'miracles'
 ]);
 
 class SubtitleService {
@@ -55,7 +56,9 @@ class SubtitleService {
     const clean = (text || '').replace(/\s+/g, ' ').trim();
     if (!clean) return [];
 
-    const targetWords = isShorts ? 5 : 7;
+    // Shorts: Punchy 3-5 word bursts for high retention mobile viewership
+    // Long-Form: Dignified 6-8 word phrases for documentary immersion
+    const targetWords = isShorts ? 4 : 7;
     const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
     const phrases = [];
 
@@ -64,7 +67,7 @@ class SubtitleService {
       if (!sentence) continue;
 
       const words = sentence.split(' ');
-      if (words.length <= targetWords + 2) {
+      if (words.length <= targetWords + 1) {
         phrases.push(sentence);
       } else {
         let chunk = [];
@@ -92,9 +95,9 @@ class SubtitleService {
 
   /**
    * Format text according to the selected subtitle style:
-   * - 'cinematic': White text with biblical keywords in radiant gold (&H00D7FF&)
+   * - 'cinematic': Pure white text with key biblical & prayer terms highlighted in radiant luminous gold (&H001FD8FF&)
    */
-  formatStyledAssText(text, style = 'cinematic') {
+  formatStyledAssText(text, style = 'cinematic', isShorts = false) {
     const cleanText = text.replace(/\n+/g, ' ').replace(/[{}]/g, '').trim();
 
     if (style === 'cinematic') {
@@ -102,7 +105,7 @@ class SubtitleService {
       const styledTokens = tokens.map(token => {
         const stripped = token.toLowerCase().replace(/[^a-z]/g, '');
         if (BIBLICAL_KEYWORDS.has(stripped)) {
-          return `{\\c&H002BD7FF&}${token}{\\c&H00FFFFFF&}`;
+          return `{\\c&H001FD8FF&}${token}{\\c&H00FFFFFF&}`;
         }
         return token;
       });
@@ -292,11 +295,16 @@ class SubtitleService {
   getAssHeader(isShorts, style) {
     const playResX = isShorts ? config.VIDEO.SHORTS.WIDTH : config.VIDEO.LONG_FORM.WIDTH;
     const playResY = isShorts ? config.VIDEO.SHORTS.HEIGHT : config.VIDEO.LONG_FORM.HEIGHT;
-    const fontSize = isShorts ? 46 : 34;
-    const marginV = isShorts ? 250 : 68;
+    // Shorts: High-impact 52pt font positioned in the safe zone (marginV = 680) above YouTube Shorts UI overlays
+    // Long-Form: Dignified 40pt font placed cleanly at the bottom margin (marginV = 80)
+    const fontSize = isShorts ? 52 : 40;
+    const marginV = isShorts ? 680 : 80;
+    const outline = isShorts ? 3.8 : 2.8;
+    const shadow = isShorts ? 2.0 : 1.8;
+    const spacing = isShorts ? 0.6 : 0.4;
 
     return `[Script Info]
-Title: ByBibleWisdom Subtitles
+Title: ByBibleWisdom Professional Subtitles
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
@@ -306,7 +314,7 @@ PlayResY: ${playResY}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,3.2,1.8,2,40,40,${marginV},1`;
+Style: Default,Trebuchet MS,${fontSize},&H00FFFFFF,&H000000FF,&H000B0E14,&H80000000,-1,0,0,0,100,100,${spacing},0,1,${outline},${shadow},2,40,40,${marginV},1`;
   }
 }
 
