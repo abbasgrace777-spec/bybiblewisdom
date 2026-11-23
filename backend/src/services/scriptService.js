@@ -526,58 +526,129 @@ ${wordTargetInstruction}
     const startTime = Date.now();
     const engineDisplayName = provider === 'gemini' ? `Google Gemini (${model})` : `Ollama (${model})`;
 
-    // ==========================================
-    // PASS 1: CHAPTER OUTLINE GENERATION
-    // ==========================================
-    if (onProgress) onProgress(1, 6, 'Pass 1: Generating Structured Chapter Outline...');
-    console.log(`[ScriptService] Pass 1: Generating structured outline for ${bookName} ${chapter}...`);
-
-    const outlineRes = await this.generateChapterOutline(bookName, chapter, chapterData.verses, provider, model, { isShorts });
-    const outline = outlineRes.outline;
-    console.log(`[ScriptService] Pass 1 complete: ${outline.sections.length} thematic sections created.`);
-
-    // ==========================================
-    // PASS 2: SECTION-BY-SECTION WRITING
-    // ==========================================
+    let outline;
     const sectionTexts = [];
     let rollingMemory = '';
-    let totalTokens = outlineRes.performance?.evalCount || 0;
+    let totalTokens = 0;
 
-    for (let i = 0; i < outline.sections.length; i++) {
-      const sec = outline.sections[i];
-      if (onProgress) onProgress(i + 2, outline.sections.length + 2, `Pass 2: Writing Section ${sec.section_number}: ${sec.section_title}...`);
+    // FAST MODE FOR SHORTS: Single Unified LLM Call (~15s instead of 7 sequential calls taking 4 mins)
+    if (isShorts) {
+      if (onProgress) onProgress(1, 2, 'Generating Fast 55s Scripture Shorts Script...');
+      console.log(`[ScriptService] Fast Mode: Generating unified 55s Shorts script for ${bookName} ${chapter}...`);
 
-      // Determine verse range for this section
-      let versesForSection = [];
-      const totalVerses = chapterData.verses.length;
-      if (isShorts) {
-        versesForSection = chapterData.verses.slice(0, Math.min(10, totalVerses));
+      const shortsPrompt = `Do not use <think> tags. Respond immediately and strictly with valid JSON.
+Write a fast-paced, punchy, 55-second YouTube Shorts script (~130 words total) for ${bookName} Chapter ${chapter}.
+Guidelines:
+1. Hook (0-5s): Arresting biblical hook without any channel welcome.
+2. Context: Specific scripture truth from ${bookName} ${chapter}.
+3. Narrative: Hebrew/Greek spiritual meaning.
+4. Christ: Christological hope and depiction.
+5. Life: Practical everyday lesson for the soul.
+6. Takeaway: Inspiring 1-sentence spiritual takeaway.
+
+Format strictly as JSON:
+{
+  "chapter_theme": "Core spiritual message in 1 sentence",
+  "sections": [
+    { "section_number": 1, "section_title": "Arresting Scripture Hook", "narration": "Hook text" },
+    { "section_number": 2, "section_title": "Biblical Context", "narration": "Scripture context text" },
+    { "section_number": 3, "section_title": "Spiritual Meaning", "narration": "Hebrew insight text" },
+    { "section_number": 4, "section_title": "Christ in Scripture", "narration": "Christological hope text" },
+    { "section_number": 5, "section_title": "Life Lesson", "narration": "Practical lesson text" },
+    { "section_number": 6, "section_title": "Spiritual Takeaway", "narration": "Closing blessing text" }
+  ]
+}
+Output ONLY the JSON object.`;
+
+      let shortsRaw;
+      if (provider === 'gemini') {
+        shortsRaw = await aiService.callGeminiText(shortsPrompt, "You are a biblical scriptwriter. Output JSON only.", { model, temperature: 0.3, num_predict: 800 });
       } else {
-        const step = Math.ceil(totalVerses / outline.sections.length);
-        const startIdx = i * step;
-        const endIdx = Math.min(totalVerses, (i + 1) * step);
-        versesForSection = chapterData.verses.slice(startIdx, endIdx);
-        if (versesForSection.length === 0) {
-          versesForSection = chapterData.verses.slice(0, 3);
+        const oRes = await ollamaService.generateCompletion(shortsPrompt, "You are a biblical scriptwriter. Output JSON only.", { model, temperature: 0.3, num_predict: 800, num_ctx: 2048 });
+        shortsRaw = ollamaService.stripThinkingText(oRes.text || oRes.rawText || '');
+      }
+
+      let parsedShorts = null;
+      try {
+        const clean = (shortsRaw || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+        parsedShorts = JSON.parse(clean);
+      } catch (e) {
+        console.warn(`[ScriptService] Fast Shorts parse notice:`, e.message);
+      }
+
+      if (parsedShorts && Array.isArray(parsedShorts.sections) && parsedShorts.sections.length > 0) {
+        outline = {
+          book: bookName,
+          chapter,
+          chapter_theme: parsedShorts.chapter_theme || `${bookName} ${chapter} Scripture Truth`,
+          sections: parsedShorts.sections.map(s => ({
+            section_number: s.section_number,
+            section_title: s.section_title,
+            theological_theme: s.narration,
+            verse_range: `${bookName} ${chapter}`
+          }))
+        };
+        for (const s of parsedShorts.sections) {
+          const cleanText = (s.narration || '').replace(/\[(?:Music|Sound|Audio|Voice|SFX)[^\]]*\]/gi, '').trim();
+          sectionTexts.push(cleanText);
+          rollingMemory += ' ' + cleanText;
         }
       }
+    }
 
-      const isFirstSection = (i === 0);
-      const isLastSection = (i === outline.sections.length - 1);
+    // LONG-FORM OR FALLBACK: TWO-PASS ARCHITECTURE
+    if (!outline) {
+      // ==========================================
+      // PASS 1: CHAPTER OUTLINE GENERATION
+      // ==========================================
+      if (onProgress) onProgress(1, 6, 'Pass 1: Generating Structured Chapter Outline...');
+      console.log(`[ScriptService] Pass 1: Generating structured outline for ${bookName} ${chapter}...`);
 
-      console.log(`[ScriptService] Pass 2 [${i + 1}/${outline.sections.length}]: Writing "${sec.section_title}" (${sec.verse_range})...`);
-      const secRes = await this.generateSectionNarration(bookName, chapter, sec, versesForSection, rollingMemory, provider, model, {
-        isShorts,
-        isFirstSection,
-        isLastSection
-      });
-      let text = (secRes.text || '').trim();
-      if (!text || text.length < 15) {
-        text = sec.theological_theme ? `In ${bookName} ${chapter}, ${sec.theological_theme}.` : `The Holy Word of God in ${bookName} ${chapter} brings eternal truth.`;
+      const outlineRes = await this.generateChapterOutline(bookName, chapter, chapterData.verses, provider, model, { isShorts });
+      outline = outlineRes.outline;
+      console.log(`[ScriptService] Pass 1 complete: ${outline.sections.length} thematic sections created.`);
+
+      // ==========================================
+      // PASS 2: SECTION-BY-SECTION WRITING
+      // ==========================================
+      totalTokens = outlineRes.performance?.evalCount || 0;
+
+      for (let i = 0; i < outline.sections.length; i++) {
+        const sec = outline.sections[i];
+        if (onProgress) onProgress(i + 2, outline.sections.length + 2, `Pass 2: Writing Section ${sec.section_number}: ${sec.section_title}...`);
+
+        // Determine verse range for this section
+        let versesForSection = [];
+        const totalVerses = chapterData.verses.length;
+        if (isShorts) {
+          versesForSection = chapterData.verses.slice(0, Math.min(10, totalVerses));
+        } else {
+          const step = Math.ceil(totalVerses / outline.sections.length);
+          const startIdx = i * step;
+          const endIdx = Math.min(totalVerses, (i + 1) * step);
+          versesForSection = chapterData.verses.slice(startIdx, endIdx);
+          if (versesForSection.length === 0) {
+            versesForSection = chapterData.verses.slice(0, 3);
+          }
+        }
+
+        const isFirstSection = (i === 0);
+        const isLastSection = (i === outline.sections.length - 1);
+
+        console.log(`[ScriptService] Pass 2 [${i + 1}/${outline.sections.length}]: Writing "${sec.section_title}" (${sec.verse_range})...`);
+        const secRes = await this.generateSectionNarration(bookName, chapter, sec, versesForSection, rollingMemory, provider, model, {
+          isShorts,
+          isFirstSection,
+          isLastSection
+        });
+        let text = (secRes.text || '').trim();
+        if (!text || text.length < 15) {
+          text = sec.theological_theme ? `In ${bookName} ${chapter}, ${sec.theological_theme}.` : `The Holy Word of God in ${bookName} ${chapter} brings eternal truth.`;
+        }
+        sectionTexts.push(text);
+        rollingMemory += ' ' + text;
+        totalTokens += (secRes.performance?.evalCount || 0);
       }
-      sectionTexts.push(text);
-      rollingMemory += ' ' + text;
-      totalTokens += (secRes.performance?.evalCount || 0);
     }
 
     // ==========================================
@@ -1360,9 +1431,9 @@ Return as JSON:
         `Closing cinematic shot of an ancient open Holy Bible with radiant golden light illuminating the sacred pages of Genesis, museum quality, ${aspect}, no text, no watermark`
       ];
 
-      const totalScenes = 15;
-      const targetSec = project.target_duration_seconds || 480;
-      const sceneDur = Math.max(20, Math.round(targetSec / totalScenes));
+      const totalScenes = Math.min(visualThemes.length, Math.max(3, rawSections.length));
+      const targetSec = project.target_duration_seconds || (totalScenes * 28);
+      const sceneDur = Math.max(15, Math.round(targetSec / totalScenes));
 
       for (let i = 0; i < totalScenes; i++) {
         let text = rawSections[i] || `Exposition of Genesis 1, movement ${i + 1}.`;
@@ -1405,9 +1476,9 @@ Return as JSON:
         `Closing cinematic shot of an ancient open Holy Bible with radiant golden light illuminating the sacred pages, peaceful sanctuary atmosphere, museum quality, ${aspect}, no text, no watermark`
       ];
 
-      const totalScenes = 15;
-      const targetSec = project.target_duration_seconds || 480;
-      const sceneDur = Math.max(20, Math.round(targetSec / totalScenes));
+      const totalScenes = Math.min(visualThemes.length, Math.max(3, rawSections.length));
+      const targetSec = project.target_duration_seconds || (totalScenes * 28);
+      const sceneDur = Math.max(15, Math.round(targetSec / totalScenes));
 
       for (let i = 0; i < totalScenes; i++) {
         let text = rawSections[i] || scriptContent.sections?.[i] || `Exposition of ${book} Chapter ${ch}, movement ${i + 1}.`;

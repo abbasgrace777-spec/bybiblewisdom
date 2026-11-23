@@ -193,7 +193,7 @@ export default function DashboardView({
                   }`}
                 >
                   <Smartphone className="w-3.5 h-3.5" />
-                  <span>Shorts (9:16)</span>
+                  <span>⚡ Shorts (9:16) ~55s</span>
                 </button>
                 <button
                   type="button"
@@ -205,7 +205,7 @@ export default function DashboardView({
                   }`}
                 >
                   <Monitor className="w-3.5 h-3.5" />
-                  <span>Full (16:9)</span>
+                  <span>⚡ Fast (16:9) ~2.5m</span>
                 </button>
               </div>
             </div>
