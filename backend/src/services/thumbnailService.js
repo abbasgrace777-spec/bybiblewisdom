@@ -12,9 +12,9 @@ class ThumbnailService {
   }
 
   /**
-   * Build 3 canonical or dynamic 2-4 word theme variants from the script/chapter
-   * - Pick 1 focal scene from the script + 1 bold phrase of 2-4 words from the real theme.
-   * - Strict Jesus Rule: Jesus appears only if the chapter is about him.
+   * Build 3 distinct, psychological high-CTR theme variants with compelling hooks
+   * - Pick 1 focal scene from the script + 1 bold 2-line phrase.
+   * - Strict Jesus Rule: Jesus appears only if the chapter/script is about him.
    */
   buildThemeVariants(book, chapter, projectTitle = '', script = null) {
     const isPrayerOrCustom = !book || book.toLowerCase() === 'scripture' || 
@@ -23,36 +23,138 @@ class ThumbnailService {
                                                projectTitle.toLowerCase().includes('prayer') ||
                                                projectTitle.toLowerCase().includes('jesus') ||
                                                projectTitle.toLowerCase().includes('peace') ||
+                                               projectTitle.toLowerCase().includes('sleep') ||
                                                projectTitle.toLowerCase().includes('night')));
 
-    if (isPrayerOrCustom && projectTitle) {
+    if (isPrayerOrCustom) {
+      const lowerTitle = (projectTitle || '').toLowerCase();
+      const isHealing = lowerTitle.includes('heal') || lowerTitle.includes('body') || lowerTitle.includes('pain') || lowerTitle.includes('sick') || lowerTitle.includes('health') || lowerTitle.includes('recovery');
+      const isPeace = lowerTitle.includes('peace') || lowerTitle.includes('worry') || lowerTitle.includes('anxiety') || lowerTitle.includes('fear') || lowerTitle.includes('comfort');
+
+      if (isHealing) {
+        return [
+          {
+            variantNumber: 1,
+            title: 'Jesus Heals Your Body (High CTR)',
+            headlineText: 'JESUS HEALS YOUR BODY',
+            line1: 'JESUS HEALS',
+            line2: 'YOUR BODY',
+            badgeText: 'PRAYER FOR TONIGHT',
+            subText: 'MATTHEW 11.28 - SACRED NIGHT PRAYER',
+            focalScene: 'Reverent portrayal of Jesus Christ offering peace and healing',
+            layoutType: 'IMPACT_HERO',
+            accentColor: '#F59E0B'
+          },
+          {
+            variantNumber: 2,
+            title: 'Pray Before Sleep (Miracle Call)',
+            headlineText: 'PRAY BEFORE YOU SLEEP',
+            line1: 'PRAY BEFORE',
+            line2: 'YOU SLEEP',
+            badgeText: 'MIRACLE PRAYER',
+            subText: 'RECEIVE STRENGTH & RECOVERY TONIGHT',
+            focalScene: 'Compassionate Jesus Christ comforting believers in prayer',
+            layoutType: 'GOLD_AUTHORITY',
+            accentColor: '#FFE01A'
+          },
+          {
+            variantNumber: 3,
+            title: 'Do Not Sleep (Urgency Warning)',
+            headlineText: 'DON’T SLEEP WITHOUT THIS',
+            line1: 'DON’T SLEEP',
+            line2: 'WITHOUT THIS',
+            badgeText: 'SACRED BLESSING',
+            subText: 'POWERFUL HEALING PRAYER FOR PEACE',
+            focalScene: 'Jesus Christ light of the world in serene night presence',
+            layoutType: 'DRAMATIC_CONTRAST',
+            accentColor: '#38BDF8'
+          }
+        ];
+      }
+
+      if (isPeace) {
+        return [
+          {
+            variantNumber: 1,
+            title: 'Peace Be Still (Calm & Rest)',
+            headlineText: 'PEACE BE STILL TONIGHT',
+            line1: 'PEACE BE STILL',
+            line2: 'REST IN GOD',
+            badgeText: 'BEDSIDE PRAYER',
+            subText: 'RELEASE ALL ANXIETY & FEAR TONIGHT',
+            focalScene: 'Jesus Christ bringing calm waters and tranquil peace',
+            layoutType: 'IMPACT_HERO',
+            accentColor: '#F59E0B'
+          },
+          {
+            variantNumber: 2,
+            title: 'God Is Near (Comfort)',
+            headlineText: 'DON’T WORRY GOD IS NEAR',
+            line1: 'DON’T WORRY',
+            line2: 'GOD IS NEAR',
+            badgeText: 'DIVINE COMFORT',
+            subText: 'PSALM 4.8 - SLEEP IN HEAVENLY PEACE',
+            focalScene: 'Compassionate savior with serene illumination',
+            layoutType: 'GOLD_AUTHORITY',
+            accentColor: '#FFE01A'
+          },
+          {
+            variantNumber: 3,
+            title: 'Holy Night Blessing (Sacred)',
+            headlineText: 'HEAR THIS NIGHT BLESSING',
+            line1: 'HEAR THIS',
+            line2: 'NIGHT BLESSING',
+            badgeText: 'SACRED PROMISE',
+            subText: 'REST PEACEFULLY UNDER GOD’S PROTECTION',
+            focalScene: 'Sacred presence of Christ under starlight',
+            layoutType: 'DRAMATIC_CONTRAST',
+            accentColor: '#38BDF8'
+          }
+        ];
+      }
+
+      // Default Prayer / Devotional Hook
       const cleanTitle = projectTitle.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[^a-zA-Z0-9\s]/g, '').trim().toUpperCase();
       const words = cleanTitle.split(/\s+/).filter(Boolean);
-      const headline = words.slice(0, 4).join(' ') || 'HEALING PRAYER';
+      const w1 = words.slice(0, 2).join(' ') || 'POWERFUL PRAYER';
+      const w2 = words.slice(2, 5).join(' ') || 'FOR TONIGHT';
+
       return [
         {
           variantNumber: 1,
           title: 'Direct Prayer Call',
-          headlineText: headline,
+          headlineText: `${w1} ${w2}`,
+          line1: w1,
+          line2: w2,
+          badgeText: 'POWERFUL PRAYER',
+          subText: 'SACRED DAILY DEVOTIONAL & BLESSING',
           focalScene: 'Reverent portrayal of Jesus Christ offering peace and healing',
-          layoutType: 'IMPACT_BANNER',
+          layoutType: 'IMPACT_HERO',
           accentColor: '#F59E0B'
         },
         {
           variantNumber: 2,
-          title: 'Peace & Healing',
-          headlineText: 'PEACE & HEALING TONIGHT',
+          title: 'Pray Before Sleep',
+          headlineText: 'PRAY THIS BEFORE SLEEP',
+          line1: 'PRAY THIS',
+          line2: 'BEFORE SLEEP',
+          badgeText: 'BEDSIDE DEVOTIONAL',
+          subText: 'DIVINE PEACE AND PROTECTION FOR YOUR HOME',
           focalScene: 'Compassionate Jesus Christ comforting believers in prayer',
-          layoutType: 'STACKED_CONTRAST',
-          accentColor: '#38BDF8'
+          layoutType: 'GOLD_AUTHORITY',
+          accentColor: '#FFE01A'
         },
         {
           variantNumber: 3,
-          title: 'Faith in Christ',
-          headlineText: 'PRAY THIS BEFORE SLEEP',
+          title: 'Sacred Promise',
+          headlineText: 'GOD HEARS YOUR PRAYER',
+          line1: 'GOD HEARS',
+          line2: 'YOUR PRAYER',
+          badgeText: 'DIVINE PROMISE',
+          subText: 'ENTER INTO GOD’S REST TONIGHT',
           focalScene: 'Jesus Christ light of the world in serene night presence',
-          layoutType: 'GOLD_EMPHASIS',
-          accentColor: '#FBBF24'
+          layoutType: 'DRAMATIC_CONTRAST',
+          accentColor: '#38BDF8'
         }
       ];
     }
@@ -61,32 +163,44 @@ class ThumbnailService {
     const ch = parseInt(chapter, 10) || 1;
     const bLower = safeBook.toLowerCase();
 
-    // Canonical themes for Genesis 1 & Exodus 14
+    // Canonical high-CTR hooks for iconic Bible chapters
     if (bLower === 'genesis' && ch === 1) {
       return [
         {
           variantNumber: 1,
           title: 'The First Light (Climax)',
           headlineText: 'LET THERE BE LIGHT',
+          line1: 'LET THERE BE',
+          line2: 'LIGHT',
+          badgeText: 'CREATION DAY ONE',
+          subText: 'GENESIS 1 - THE SACRED BEGINNING',
           focalScene: 'The First Day of Creation — God speaks radiant light into the cosmic darkness',
-          layoutType: 'IMPACT_BANNER',
+          layoutType: 'IMPACT_HERO',
           accentColor: '#F59E0B'
         },
         {
           variantNumber: 2,
           title: 'Before Time (Revelation)',
           headlineText: 'BEFORE THE BEGINNING',
+          line1: 'BEFORE TIME',
+          line2: 'WHAT WAS THERE?',
+          badgeText: 'COSMIC MYSTERY',
+          subText: 'GENESIS 1 - BEFORE THE HEAVENS AND EARTH',
           focalScene: 'The Spirit of God hovering over the face of the unformed waters',
-          layoutType: 'STACKED_CONTRAST',
-          accentColor: '#38BDF8'
+          layoutType: 'GOLD_AUTHORITY',
+          accentColor: '#FFE01A'
         },
         {
           variantNumber: 3,
-          title: 'Earth Emerges (Cosmic Order)',
-          headlineText: 'CREATION OF EARTH',
+          title: 'The 7 Days Revealed',
+          headlineText: 'THE 7 DAYS REVEALED',
+          line1: 'THE 7 DAYS',
+          line2: 'REVEALED',
+          badgeText: 'DIVINE ORDER',
+          subText: 'GENESIS 1 - COMPLETE CHAPTER BREAKDOWN',
           focalScene: 'The gathering of the waters and emergence of living dry land and skies',
-          layoutType: 'GOLD_EMPHASIS',
-          accentColor: '#FBBF24'
+          layoutType: 'DRAMATIC_CONTRAST',
+          accentColor: '#38BDF8'
         }
       ];
     }
@@ -97,97 +211,161 @@ class ThumbnailService {
           variantNumber: 1,
           title: 'The Sea Divides (Miracle Climax)',
           headlineText: 'THE SEA DIVIDES',
+          line1: 'THE SEA',
+          line2: 'DIVIDES',
+          badgeText: 'RED SEA MIRACLE',
+          subText: 'EXODUS 14 - THE GREATEST DELIVERANCE',
           focalScene: 'Moses stretching out his staff as the Red Sea divides into towering walls of water',
-          layoutType: 'IMPACT_BANNER',
+          layoutType: 'IMPACT_HERO',
           accentColor: '#F59E0B'
         },
         {
           variantNumber: 2,
           title: 'Stand and See (Deliverance)',
-          headlineText: 'STAND AND SEE',
+          headlineText: 'STAND STILL AND SEE',
+          line1: 'STAND STILL',
+          line2: 'AND SEE',
+          badgeText: 'DIVINE VICTORY',
+          subText: 'EXODUS 14 - GOD FIGHTS FOR YOU',
           focalScene: 'Moses reassuring Israel while the supernatural pillar of cloud and fire stands guard',
-          layoutType: 'STACKED_CONTRAST',
-          accentColor: '#38BDF8'
+          layoutType: 'GOLD_AUTHORITY',
+          accentColor: '#FFE01A'
         },
         {
           variantNumber: 3,
           title: 'Walls of Water (Exodus March)',
           headlineText: 'WALLS OF WATER',
+          line1: 'WALLS OF',
+          line2: 'WATER',
+          badgeText: 'HISTORICAL EVENT',
+          subText: 'EXODUS 14 - ISRAEL CROSSES ON DRY GROUND',
           focalScene: 'The children of Israel journeying through the dry seabed between towering liquid walls',
-          layoutType: 'GOLD_EMPHASIS',
-          accentColor: '#FBBF24'
+          layoutType: 'DRAMATIC_CONTRAST',
+          accentColor: '#38BDF8'
         }
       ];
     }
 
-    // Proverbs / Wisdom Authority layout preset (3-line high-CTR formula)
-    if (bLower === 'proverbs' || bLower === 'ecclesiastes') {
+    if (bLower === 'exodus' && ch === 32) {
       return [
         {
           variantNumber: 1,
-          title: `8 Lessons from ${safeBook} ${ch}`,
-          headlineText: `8 Lessons from ${safeBook} ${ch}`,
-          line1: '8 Lessons',
-          line2: 'from',
-          line3: `${safeBook} ${ch}`,
-          focalScene: `King Solomon overlooking ancient Jerusalem at golden sunset`,
-          layoutType: 'WISDOM_AUTHORITY',
-          accentColor: '#FFE01A'
+          title: 'The Golden Idol (Climax)',
+          headlineText: 'THE GOLDEN IDOL GOD’S WRATH',
+          line1: 'THE GOLDEN IDOL',
+          line2: 'GOD’S WRATH',
+          badgeText: 'EXODUS 32 CLIMAX',
+          subText: 'EXODUS 32 - THE GREAT FALL OF ISRAEL',
+          focalScene: 'The idol of the golden calf in the wilderness and the wrath of God on Mount Sinai',
+          layoutType: 'IMPACT_HERO',
+          accentColor: '#F59E0B'
         },
         {
           variantNumber: 2,
-          title: `The Secret of Solomon`,
-          headlineText: `The Secret of Solomon`,
-          line1: 'The Secret',
-          line2: 'of',
-          line3: 'Solomon',
-          focalScene: `Elderly King Solomon on stone balcony with ancient scroll`,
-          layoutType: 'WISDOM_AUTHORITY',
+          title: 'Moses Breaks The Tablets',
+          headlineText: 'MOSES BREAKS THE TABLETS',
+          line1: 'MOSES BREAKS',
+          line2: 'THE TABLETS',
+          badgeText: 'SACRED JUDGMENT',
+          subText: 'EXODUS 32 - SHATTERED TEN COMMANDMENTS',
+          focalScene: 'Moses coming down Mount Sinai and casting the stone tablets to pieces',
+          layoutType: 'GOLD_AUTHORITY',
           accentColor: '#FFE01A'
         },
         {
           variantNumber: 3,
-          title: `The Wisdom of ${safeBook} ${ch}`,
-          headlineText: `The Wisdom of ${safeBook} ${ch}`,
-          line1: 'The Wisdom',
-          line2: 'of',
-          line3: `${safeBook} ${ch}`,
-          focalScene: `Ancient scrolls of divine wisdom in Jerusalem temple`,
-          layoutType: 'WISDOM_AUTHORITY',
+          title: 'The Grave Sin of Israel',
+          headlineText: 'THE GRAVE SIN OF ISRAEL',
+          line1: 'THE GRAVE SIN',
+          line2: 'OF ISRAEL',
+          badgeText: 'ANCIENT HISTORY',
+          subText: 'EXODUS 32 - ARCHAEOLOGICAL & SCRIPTURAL TRUTH',
+          focalScene: 'The camp of Israel in rebellion around the golden idol',
+          layoutType: 'DRAMATIC_CONTRAST',
+          accentColor: '#38BDF8'
+        }
+      ];
+    }
+
+    // Proverbs / Ecclesiastes
+    if (bLower === 'proverbs' || bLower === 'ecclesiastes') {
+      return [
+        {
+          variantNumber: 1,
+          title: 'The Secret of Solomon',
+          headlineText: 'THE SECRET OF SOLOMON',
+          line1: 'THE SECRET',
+          line2: 'OF SOLOMON',
+          badgeText: 'ANCIENT WISDOM',
+          subText: `${safeBook.toUpperCase()} ${ch} - SECRETS OF WEALTH & PEACE`,
+          focalScene: 'King Solomon on throne with ancient wisdom scrolls in Jerusalem',
+          layoutType: 'IMPACT_HERO',
+          accentColor: '#F59E0B'
+        },
+        {
+          variantNumber: 2,
+          title: '8 Rules for Life',
+          headlineText: '8 RULES FOR LIFE',
+          line1: '8 RULES',
+          line2: 'FOR LIFE',
+          badgeText: 'PROVERBS TRUTH',
+          subText: `${safeBook.toUpperCase()} ${ch} - TIMELESS LIFE LESSONS`,
+          focalScene: 'Elderly King Solomon with sacred temple architecture',
+          layoutType: 'GOLD_AUTHORITY',
           accentColor: '#FFE01A'
+        },
+        {
+          variantNumber: 3,
+          title: 'Do Not Live Without This',
+          headlineText: 'DO NOT LIVE WITHOUT THIS',
+          line1: 'DO NOT LIVE',
+          line2: 'WITHOUT THIS',
+          badgeText: 'SACRED WARNING',
+          subText: `${safeBook.toUpperCase()} ${ch} - DIVINE INSTRUCTION`,
+          focalScene: 'Ancient scrolls of divine wisdom in Jerusalem temple',
+          layoutType: 'DRAMATIC_CONTRAST',
+          accentColor: '#38BDF8'
         }
       ];
     }
 
     // Dynamic extraction for any other chapter
-    const v1 = `${safeBook.toUpperCase()} ${ch}`.slice(0, 18);
-    const v2 = 'THE SACRED STORY';
-    const v3 = 'TRUTH UNVEILED';
-
     return [
       {
         variantNumber: 1,
-        title: `${safeBook} ${ch}: Climax Moment`,
-        headlineText: v1,
+        title: `${safeBook} ${ch}: Sacred Climax`,
+        headlineText: `${safeBook.toUpperCase()} ${ch} SACRED CLIMAX`,
+        line1: `${safeBook.toUpperCase()} ${ch}`,
+        line2: 'SACRED CLIMAX',
+        badgeText: 'BIBLICAL TRUTH',
+        subText: `${safeBook.toUpperCase()} CHAPTER ${ch} - COMPLETE DEEP DIVE`,
         focalScene: `Central dramatic theme of ${safeBook} ${ch}`,
-        layoutType: 'IMPACT_BANNER',
+        layoutType: 'IMPACT_HERO',
         accentColor: '#F59E0B'
       },
       {
         variantNumber: 2,
         title: `${safeBook} ${ch}: Divine Revelation`,
-        headlineText: v2,
+        headlineText: `WHAT HAPPENED IN ${safeBook.toUpperCase()} ${ch}`,
+        line1: 'WHAT HAPPENED IN',
+        line2: `${safeBook.toUpperCase()} ${ch}`,
+        badgeText: 'DIVINE REVELATION',
+        subText: `${safeBook.toUpperCase()} CHAPTER ${ch} - SCRIPTURE EXPLAINED`,
         focalScene: `Theological message of ${safeBook} ${ch}`,
-        layoutType: 'STACKED_CONTRAST',
-        accentColor: '#38BDF8'
+        layoutType: 'GOLD_AUTHORITY',
+        accentColor: '#FFE01A'
       },
       {
         variantNumber: 3,
-        title: `${safeBook} ${ch}: Historical Record`,
-        headlineText: v3,
+        title: `${safeBook} ${ch}: Untold Story`,
+        headlineText: `THE UNTOLD STORY OF ${safeBook.toUpperCase()}`,
+        line1: 'THE UNTOLD STORY',
+        line2: `OF ${safeBook.toUpperCase()}`,
+        badgeText: 'ANCIENT HISTORY',
+        subText: `${safeBook.toUpperCase()} CHAPTER ${ch} - SACRED RECORD`,
         focalScene: `Historical biblical narrative of ${safeBook} ${ch}`,
-        layoutType: 'GOLD_EMPHASIS',
-        accentColor: '#FBBF24'
+        layoutType: 'DRAMATIC_CONTRAST',
+        accentColor: '#38BDF8'
       }
     ];
   }
@@ -226,7 +404,34 @@ class ThumbnailService {
       } catch (_) {}
     }
 
-    // Priority 3: Procedural atmospheric base canvas
+    // Priority 3: Curated Authentic Horizontal Masterwork from local libraries
+    const project = get(`SELECT bible_book, category, title FROM projects WHERE id = ?`, [projectId]) || {};
+    const bookName = (project.bible_book || '').toLowerCase();
+    const isNewTestament = /matthew|mark|luke|john|acts|romans|corinthians|galatians|ephesians|philippians|colossians|thessalonians|timothy|titus|philemon|hebrews|james|peter|jude|revelation/.test(bookName);
+    const mentionsJesus = /jesus|christ|savior|messiah|gospel|cross|resurrection|healing|prayer|bless/i.test((project.title || '') + ' ' + (project.category || ''));
+    const useJesus = isNewTestament || mentionsJesus || project.category === 'PRAYER_AND_DEVOTIONAL';
+
+    if (useJesus) {
+      const jesusDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', 'horizontal');
+      if (fs.existsSync(jesusDir)) {
+        const jFiles = fs.readdirSync(jesusDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+        if (jFiles.length > 0) {
+          const seed = (projectId || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+          return path.join(jesusDir, jFiles[seed % jFiles.length]);
+        }
+      }
+    } else {
+      const fineArtDir = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', 'horizontal');
+      if (fs.existsSync(fineArtDir)) {
+        const aFiles = fs.readdirSync(fineArtDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+        if (aFiles.length > 0) {
+          const seed = (projectId || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+          return path.join(fineArtDir, aFiles[seed % aFiles.length]);
+        }
+      }
+    }
+
+    // Priority 4: Procedural atmospheric base canvas
     const tempDir = path.join(config.PATHS.STORAGE, 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
     const defaultBg = path.join(tempDir, `canvas_${projectId}.jpg`);
@@ -245,80 +450,83 @@ class ThumbnailService {
    * Render a code-based thumbnail variant using FFmpeg
    * Requirements:
    * - 1280x720, under 2 MB, JPG
-   * - Bold sans-serif text, white with dark outline, readable at 160 px wide
-   * - Subject on right third, text on left third
+   * - High-CTR visual hierarchy: smooth cinematic alpha gradient on left, vibrant artwork on right
+   * - Bold 3D typography, readable at 160 px wide
    * - Bottom-right corner strictly clear (for YouTube duration badge)
    */
   renderCodeThumbnail(bgPath, variant, outputJpgPath, output160Path, bookName = 'GENESIS', chapterNum = 1) {
-    const headline = variant.headlineText.toUpperCase().trim();
-    const words = headline.split(/\s+/).filter(Boolean);
+    const sanitize = (str) => (str || '')
+      .replace(/[:\\']/g, '')
+      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+      .trim();
 
-    // Escape special characters for FFmpeg drawtext
-    const cleanWords = words.map(w => w.replace(/[:\\']/g, ''));
+    const cleanL1 = sanitize(variant.line1 || variant.headlineText.split(/\s+/).slice(0, 2).join(' ')).toUpperCase();
+    const cleanL2 = sanitize(variant.line2 || variant.headlineText.split(/\s+/).slice(2).join(' ')).toUpperCase();
+    const cleanBadge = sanitize(variant.badgeText || `${bookName.toUpperCase()} ${chapterNum}`).toUpperCase();
+    const cleanSub = sanitize(variant.subText || `${bookName.toUpperCase()} CHAPTER ${chapterNum} - SACRED DEEP DIVE`).toUpperCase();
 
-    let textFilters = [];
+    const badgeW = Math.max(220, Math.min(440, cleanBadge.length * 15 + 40));
+    const subW = Math.max(260, Math.min(540, cleanSub.length * 10 + 40));
 
-    if (variant.layoutType === 'WISDOM_AUTHORITY') {
-      const line1 = (variant.line1 || cleanWords[0] || '8 Lessons').replace(/[:\\']/g, '');
-      const line2 = (variant.line2 || cleanWords[1] || 'from').replace(/[:\\']/g, '');
-      const line3 = (variant.line3 || cleanWords.slice(2).join(' ') || `${bookName} ${chapterNum}`).replace(/[:\\']/g, '');
+    // Layout-specific styling parameters
+    let badgeBg = '#D97706@0.95';
+    let accentColor = variant.accentColor || '#F59E0B';
+    let font1 = this.fontImpact;
+    let font2 = this.fontImpact;
+    let color1 = 'white';
+    let color2 = '#FFE01A';
+    let size1 = 96;
+    let size2 = 104;
+    let border1 = 12;
+    let border2 = 13;
 
-      textFilters = [
-        'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720',
-        `drawtext=fontfile='${this.fontArialBlack}':text='${line1}':fontcolor=white:fontsize=115:bordercolor=black:borderw=11:shadowcolor=black@0.9:shadowx=6:shadowy=6:x=50:y=130`,
-        `drawtext=fontfile='${this.fontArialBlack}':text='${line2}':fontcolor=white:fontsize=88:bordercolor=black:borderw=10:shadowcolor=black@0.9:shadowx=6:shadowy=6:x=140:y=275`,
-        `drawtext=fontfile='${this.fontArialBlack}':text='${line3}':fontcolor=#FFE01A:fontsize=128:bordercolor=black:borderw=12:shadowcolor=black@0.95:shadowx=7:shadowy=7:x=30:y=410`
-      ];
-    } else if (variant.layoutType === 'STACKED_CONTRAST' && cleanWords.length >= 2) {
-      // Line 1: first half, Line 2: second half (gold)
-      const mid = Math.ceil(cleanWords.length / 2);
-      const line1 = cleanWords.slice(0, mid).join(' ');
-      const line2 = cleanWords.slice(mid).join(' ');
-
-      textFilters = [
-        'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720',
-        'drawbox=x=0:y=0:w=680:h=720:color=black@0.48:t=fill',
-        `drawbox=x=80:y=160:w=260:h=36:color=#D97706@0.9:t=fill`,
-        `drawtext=fontfile='${this.fontArialBold}':text='BYBIBLEWISDOM':fontcolor=white:fontsize=20:x=105:y=168`,
-        `drawtext=fontfile='${this.fontImpact}':text='${line1}':fontcolor=white:fontsize=84:bordercolor=black:borderw=6:shadowcolor=black@0.9:shadowx=4:shadowy=4:x=80:y=210`,
-        `drawtext=fontfile='${this.fontImpact}':text='${line2}':fontcolor=#F59E0B:fontsize=88:bordercolor=black:borderw=6:shadowcolor=black@0.9:shadowx=4:shadowy=4:x=80:y=305`,
-        `drawbox=x=80:y=410:w=280:h=32:color=black@0.7:t=fill`,
-        `drawtext=fontfile='${this.fontArialBold}':text='${bookName.toUpperCase()} CHAPTER ${chapterNum}':fontcolor=#E2E8F0:fontsize=17:x=95:y=417`
-      ];
-    } else if (variant.layoutType === 'GOLD_EMPHASIS' && cleanWords.length >= 2) {
-      // Golden bar on far left, large text
-      const line1 = cleanWords.slice(0, -1).join(' ');
-      const lastWord = cleanWords[cleanWords.length - 1];
-
-      textFilters = [
-        'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720',
-        'drawbox=x=0:y=0:w=660:h=720:color=black@0.46:t=fill',
-        `drawbox=x=55:y=180:w=8:h=240:color=#F59E0B@0.95:t=fill`,
-        `drawtext=fontfile='${this.fontArialBold}':text='${line1}':fontcolor=white:fontsize=72:bordercolor=black:borderw=6:shadowcolor=black@0.8:shadowx=4:shadowy=4:x=80:y=200`,
-        `drawtext=fontfile='${this.fontArialBold}':text='${lastWord}':fontcolor=#FBBF24:fontsize=84:bordercolor=black:borderw=7:shadowcolor=black@0.9:shadowx=4:shadowy=4:x=80:y=285`,
-        `drawbox=x=80:y=395:w=260:h=30:color=black@0.65:t=fill`,
-        `drawtext=fontfile='${this.fontArialBold}':text='COMPLETE EXPLANATION':fontcolor=#F59E0B:fontsize=16:x=95:y=401`
-      ];
-    } else {
-      // Default: IMPACT_BANNER (single or two line punch)
-      const lineText = cleanWords.join(' ');
-      textFilters = [
-        'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720',
-        'drawbox=x=0:y=0:w=640:h=720:color=black@0.45:t=fill',
-        `drawbox=x=80:y=180:w=260:h=38:color=#D97706@0.9:t=fill`,
-        `drawtext=fontfile='${this.fontArialBold}':text='BYBIBLEWISDOM':fontcolor=white:fontsize=22:x=105:y=188`,
-        `drawtext=fontfile='${this.fontImpact}':text='${lineText}':fontcolor=white:fontsize=78:bordercolor=black:borderw=6:shadowcolor=black@0.9:shadowx=4:shadowy=4:x=80:y=240`,
-        `drawbox=x=80:y=350:w=280:h=32:color=black@0.6:t=fill`,
-        `drawtext=fontfile='${this.fontArialBold}':text='${bookName.toUpperCase()} ${chapterNum}':fontcolor=#F59E0B:fontsize=18:x=95:y=357`
-      ];
+    if (variant.layoutType === 'GOLD_AUTHORITY') {
+      badgeBg = '#0F172A@0.92';
+      accentColor = '#FFE01A';
+      font1 = this.fontArialBlack;
+      font2 = this.fontArialBlack;
+      color1 = '#FFD700';
+      color2 = 'white';
+      size1 = 86;
+      size2 = 98;
+      border1 = 11;
+      border2 = 12;
+    } else if (variant.layoutType === 'DRAMATIC_CONTRAST') {
+      badgeBg = '#B91C1C@0.95';
+      accentColor = '#38BDF8';
+      font1 = this.fontImpact;
+      font2 = this.fontImpact;
+      color1 = 'white';
+      color2 = '#38BDF8';
+      size1 = 94;
+      size2 = 102;
+      border1 = 12;
+      border2 = 13;
     }
 
-    const vf = textFilters.join(',');
+    // FFmpeg Filter Graph:
+    // 1. Scaled, cropped, vibrance/contrast enhanced background
+    // 2. Smooth feathered alpha gradient shadow on left 60%
+    // 3. Top pill badge, vertical glowing bar, massive 3D text, bottom citation bar
+    // 4. Bottom-right quadrant strictly clear for YouTube timestamp badge
+    const filterComplex = [
+      '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.14:brightness=0.01:saturation=1.28,vignette=PI/5[base]',
+      "color=c=black@0:s=1280x720,format=rgba,geq=r=0:g=0:b=0:a='if(lte(X,80),225,if(lte(X,760),225*(1-(X-80)/680),0))'[grad]",
+      '[base][grad]overlay=0:0[graded]',
+      `[graded]drawbox=x=70:y=115:w=${badgeW}:h=44:color=${badgeBg}:t=fill,` +
+      `drawtext=fontfile='${this.fontArialBlack}':text='${cleanBadge}':fontcolor=white:fontsize=19:bordercolor=black:borderw=2:x=90:y=127,` +
+      `drawbox=x=50:y=175:w=8:h=235:color=${accentColor}@0.95:t=fill,` +
+      `drawtext=fontfile='${font1}':text='${cleanL1}':fontcolor=${color1}:fontsize=${size1}:bordercolor=black:borderw=${border1}:shadowcolor=black@0.95:shadowx=6:shadowy=6:x=70:y=188,` +
+      `drawtext=fontfile='${font2}':text='${cleanL2}':fontcolor=${color2}:fontsize=${size2}:bordercolor=black:borderw=${border2}:shadowcolor=black@0.95:shadowx=6:shadowy=6:x=70:y=305,` +
+      `drawbox=x=70:y=435:w=${subW}:h=38:color=black@0.8:t=fill,` +
+      `drawtext=fontfile='${this.fontArialBold}':text='${cleanSub}':fontcolor=#F59E0B:fontsize=17:x=85:y=446[outv]`
+    ].join(';');
 
     // 1. Render main 1280x720 JPG
     execFileSync(config.PATHS.FFMPEG, [
       '-i', bgPath,
-      '-vf', vf,
+      '-filter_complex', filterComplex,
+      '-map', '[outv]',
       '-q:v', '2',
       '-vframes', '1',
       outputJpgPath,
@@ -352,7 +560,7 @@ class ThumbnailService {
       outputJpgPath,
       output160Path,
       sizeBytes: fs.statSync(outputJpgPath).size,
-      headlineText: headline
+      headlineText: `${cleanL1} ${cleanL2}`
     };
   }
 
