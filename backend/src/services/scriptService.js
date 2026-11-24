@@ -1476,7 +1476,7 @@ Return as JSON:
         `Closing cinematic shot of an ancient open Holy Bible with radiant golden light illuminating the sacred pages, peaceful sanctuary atmosphere, museum quality, ${aspect}, no text, no watermark`
       ];
 
-      const totalScenes = Math.min(genesis1VisualThemes.length, Math.max(3, rawSections.length));
+      const totalScenes = Math.min(visualThemes.length, Math.max(3, rawSections.length));
       const targetSec = project.target_duration_seconds || (totalScenes * 28);
       const sceneDur = Math.max(15, Math.round(targetSec / totalScenes));
 
