@@ -1,3 +1,4 @@
+const { TextDecoder } = require('node:util');
 const config = require('../config');
 const { get, run } = require('../db/database');
 

@@ -1,7 +1,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
-const { execFile, spawn } = require('node:child_process');
+const { execFile, execFileSync, spawn } = require('node:child_process');
 const util = require('node:util');
 const execFileAsync = util.promisify(execFile);
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');

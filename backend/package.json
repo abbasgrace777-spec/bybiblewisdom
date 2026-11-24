@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "seed": "node src/db/seeds/index.js",
-    "test": "node test_units.js"
+    "test": "node test_units.js",
+    "lint": "eslint \"src/**/*.js\""
   },
   "keywords": [],
   "author": "",
@@ -20,5 +21,8 @@
     "msedge-tts": "^2.1.1",
     "multer": "^2.5.0",
     "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.15.0"
   }
 }

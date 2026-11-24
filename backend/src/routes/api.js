@@ -29,6 +29,7 @@ const categoryService = require('../services/categoryService');
 const calendarService = require('../services/calendarService');
 const researchSourcesService = require('../services/researchSourcesService');
 const promptModeService = require('../services/promptModeService');
+const aiService = require('../services/aiService');
 const config = require('../config');
 const { query, run, get } = require('../db/database');
 
