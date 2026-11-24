@@ -11,7 +11,75 @@ const ollamaService = require('./ollamaService');
 const chapterReaderService = require('./chapterReaderService');
 const seoService = require('./seoService');
 
+const SCRIPT_TYPES = {
+  DOCUMENTARY: {
+    id: 'DOCUMENTARY',
+    name: 'Verse-by-Verse Canonical Documentary',
+    shortName: 'Canonical Documentary',
+    badge: 'Reverent & Scholarly',
+    tone: 'Reverent, scholarly, comprehensive chapter exposition with historical depth, linguistic clarity, and Christological fulfillment.',
+    pacing: '180–220 words per section (~15–20 mins)',
+    description: 'Systematic verse-by-verse chapter exposition with Hebrew/Greek word insights, ancient Near Eastern cultural context, and Christological climax.',
+    guidelines: 'Provide faithful, verse-by-verse historical, linguistic, and spiritual exposition. Unpack Hebrew/Greek word nuances and theological depth.'
+  },
+  DEVOTIONAL: {
+    id: 'DEVOTIONAL',
+    name: 'Sacred Devotional & Healing Prayer',
+    shortName: 'Devotional & Prayer',
+    badge: 'Peaceful & Comforting',
+    tone: 'Gentle, comforting, peaceful, meditative, and prayerful. Soothing cadence for heart healing, soul rest, and bedtime prayer.',
+    pacing: '160–200 words per section (Unhurried, calming cadence)',
+    description: 'Calm, comforting scripture meditation and heartfelt prayer for soul rest, healing, anxiety relief, and personal closeness with God.',
+    guidelines: 'Speak with deep warmth, compassion, and comforting peace. Focus on God’s tender mercy, healing promises, and reassurance for the soul. Avoid harsh academic debate; invite personal prayer and surrender.'
+  },
+  ARCHAEOLOGY: {
+    id: 'ARCHAEOLOGY',
+    name: 'Biblical Archaeology & Historical Evidence',
+    shortName: 'Archaeology & History',
+    badge: 'Investigative & Academic',
+    tone: 'Academic, investigative, historical, grounded in archaeological excavations, ancient Near East artifacts, and ancient manuscripts.',
+    pacing: '190–230 words per section (Evidence-rich)',
+    description: 'Historical artifacts, ancient clay tablets, Dead Sea Scrolls, city excavations, and manuscript discoveries confirming biblical events.',
+    guidelines: 'Highlight archaeological findings, ancient Near Eastern inscriptions, excavations (e.g. Jericho, Jerusalem, Qumran), and manuscript integrity. Anchor every verse in historical reality.'
+  },
+  DRAMATIC: {
+    id: 'DRAMATIC',
+    name: 'Epic High-Retention Narrative & Climax',
+    shortName: 'Epic Narrative',
+    badge: 'Cinematic & Arresting',
+    tone: 'Cinematic, dramatic, engaging, high tension, character stakes, divine intervention, and majestic deliverance.',
+    pacing: '180–210 words per section (Dynamic high-tension storytelling)',
+    description: 'High-suspense cinematic storytelling emphasizing spiritual conflict, character stakes, divine intervention, and majestic climax.',
+    guidelines: 'Use vivid sensory descriptions, narrative momentum, and dramatic tension. Showcase the awe-inspiring majesty of God intervening in human crisis.'
+  },
+  SHORTS_55S: {
+    id: 'SHORTS_55S',
+    name: 'Fast 55s Scripture Short',
+    shortName: '55s Scripture Short',
+    badge: 'Punchy & Arresting',
+    tone: 'Punchy, arresting, fast-paced, direct hook, core truth, and inspiring takeaway.',
+    pacing: '120–140 words total (55 seconds)',
+    description: 'Rapid vertical format jumping straight into a gripping hook, core scripture truth, and memorable spiritual takeaway.',
+    guidelines: 'Zero channel welcome or filler. Hook viewer in first 3 seconds with a piercing truth or question, deliver the verse powerfully, and finish with a memorable spiritual takeaway.'
+  }
+};
+
 class ScriptService {
+  /**
+   * Get all supported script types
+   */
+  getScriptTypes() {
+    return Object.values(SCRIPT_TYPES);
+  }
+
+  /**
+   * Get specific script type configuration
+   */
+  getScriptType(typeId) {
+    if (!typeId) return SCRIPT_TYPES.DOCUMENTARY;
+    const key = String(typeId).toUpperCase();
+    return SCRIPT_TYPES[key] || SCRIPT_TYPES.DOCUMENTARY;
+  }
   /**
    * Get configured script provider: 'ollama' (default) or 'gemini'
    */
@@ -258,6 +326,8 @@ class ScriptService {
   async generateChapterOutline(bookName, chapter, verses, provider, model, options = {}) {
     const isShorts = options.isShorts || false;
     const verseCount = verses.length;
+    const scriptTypeKey = (options.scriptType || (isShorts ? 'SHORTS_55S' : 'DOCUMENTARY')).toUpperCase();
+    const typeConfig = SCRIPT_TYPES[scriptTypeKey] || SCRIPT_TYPES.DOCUMENTARY;
 
     const interactionGuidelines = isShorts
       ? `- Section 1 MUST be titled "Arresting Scripture Hook" jumping directly into the powerful truth of ${bookName} ${chapter} without any channel welcome or intro filler.
@@ -268,7 +338,12 @@ class ScriptService {
 - The Final Section MUST be titled "Benediction & Community Call to Action" with a warm blessing and call for viewers to subscribe, like, and share prayer requests in the comments.`;
 
     const prompt = `Do not use <think> tags. Respond immediately and strictly with valid JSON.
-Create a structured ${isShorts ? '6-scene short-form (55-second)' : '5-section long-form'} narrative outline for a Christian documentary on ${bookName} Chapter ${chapter}.
+Create a structured ${isShorts ? '6-scene short-form (55-second)' : '5-section long-form'} narrative outline for a Christian production on ${bookName} Chapter ${chapter}.
+
+Target Script Style: ${typeConfig.name} (${typeConfig.badge})
+Style Description: ${typeConfig.description}
+Style Guidelines for Outline:
+${typeConfig.guidelines}
 
 Viewer Interaction & Retention Guidelines:
 ${interactionGuidelines}
@@ -298,7 +373,7 @@ Format strictly as JSON with this exact schema:
 
 Ensure all ${isShorts ? '6' : '5'} sections are populated. Output ONLY the JSON object.`;
 
-    const systemPrompt = `You are a theological scholar and documentary story architect. Output valid JSON only. Do not output markdown reasoning outside the JSON block.`;
+    const systemPrompt = `You are a theological scholar and story architect specializing in "${typeConfig.name}" style (${typeConfig.badge}) for @ByBibleWisdom. Output valid JSON only. Do not output markdown reasoning outside the JSON block.`;
 
     let res;
     if (provider === 'gemini') {
@@ -340,6 +415,8 @@ Ensure all ${isShorts ? '6' : '5'} sections are populated. Output ONLY the JSON 
     const isShorts = options.isShorts || false;
     const isFirst = options.isFirstSection || false;
     const isLast = options.isLastSection || false;
+    const scriptTypeKey = (options.scriptType || (isShorts ? 'SHORTS_55S' : 'DOCUMENTARY')).toUpperCase();
+    const typeConfig = SCRIPT_TYPES[scriptTypeKey] || SCRIPT_TYPES.DOCUMENTARY;
 
     let interactionRule = '';
     if (!isShorts) {
@@ -352,7 +429,7 @@ Ensure all ${isShorts ? '6' : '5'} sections are populated. Output ONLY the JSON 
 
     const wordTargetInstruction = isShorts
       ? '1. STRICT FOR 60-SECOND SHORT: Write exactly 18 to 24 words (1 punchy, reverent spoken sentence) for this scene. Spoken duration must be 7 to 9 seconds. Do NOT write more than 28 words. Jump straight into the verse or truth without channel greetings.'
-      : (isLast ? '1. Write 180-220 words of spoken documentary narration, concluding with the benediction and community call to action.' : '1. Write 200-250 words of spoken documentary narration for this section.');
+      : (isLast ? '1. Write 180-220 words of spoken narration, concluding with the benediction and community call to action.' : '1. Write 200-250 words of spoken narration for this section.');
 
     const prompt = `Do not use <think> tags. Respond immediately with pure spoken narration text only.
 Book: ${bookName}, Chapter: ${chapter}
@@ -360,19 +437,23 @@ Section ${section.section_number}: ${section.section_title} (${section.verse_ran
 Theological Theme: ${section.theological_theme}
 Ancient Language Insight: ${section.hebrew_greek_word || 'Biblical truth'}
 
+Target Script Style: ${typeConfig.name} (${typeConfig.badge})
+Tone Directive: ${typeConfig.tone}
+Style Directives: ${typeConfig.guidelines}
+
 Exact Scripture Verses for this section:
 ${versesForSection.map(v => `[${v.verse}] ${v.verse_text}`).join('\n')}
 
 Previous Context (continue smoothly):
-${rollingContext ? rollingContext.slice(-300) : 'Opening of video documentary.'}
+${rollingContext ? rollingContext.slice(-300) : 'Opening of video production.'}
 
 Strict Spoken Narration Rules:
 ${wordTargetInstruction}
 2. Every Scripture quotation must match the verses above exactly.
 3. STRICT: Do NOT include stage directions, bracketed audio cues, or sound effects (e.g. NO "[Music fades]", NO "(Soft reverent tone)"). Write ONLY words spoken aloud by the narrator.
-4. Reverent, peaceful, comforting, and inspiring tone. Jesus Christ is depicted with gentle compassionate authority only where appropriate.${interactionRule}`;
+4. Tone: ${typeConfig.tone}. Jesus Christ is depicted with gentle compassionate authority only where appropriate.${interactionRule}`;
 
-    const systemPrompt = `You are the lead theological documentary narrator for @ByBibleWisdom. Write only spoken narration text.`;
+    const systemPrompt = `You are the lead narrator for @ByBibleWisdom specializing in "${typeConfig.name}" style (${typeConfig.badge}). Tone: ${typeConfig.tone}. Write only spoken narration text.`;
 
     let res;
     if (provider === 'gemini') {
@@ -488,12 +569,15 @@ ${wordTargetInstruction}
     const chapter = project.chapter_start || 1;
     const translation = project.bible_translation || 'WEB';
     const isShorts = project.format === 'SHORTS';
+    const scriptTypeKey = (options.scriptType || options.script_type || project.script_type || (isShorts ? 'SHORTS_55S' : 'DOCUMENTARY')).toUpperCase();
+    const activeScriptType = SCRIPT_TYPES[scriptTypeKey] ? scriptTypeKey : (isShorts ? 'SHORTS_55S' : 'DOCUMENTARY');
+    const typeConfig = SCRIPT_TYPES[activeScriptType];
 
     // Provider resolution
     const provider = (options.provider || this.getScriptProvider()).toLowerCase();
     const model = options.model || (provider === 'gemini' ? (options.geminiModel || 'gemini-2.0-flash') : this.getScriptModel());
 
-    console.log(`[ScriptService] Initiating Stage 5 Two-Pass script generation for ${bookName} ${chapter} via provider: '${provider}', model: '${model}'...`);
+    console.log(`[ScriptService] Initiating Stage 5 script generation for ${bookName} ${chapter} (Style: ${typeConfig.name} [${activeScriptType}]) via provider: '${provider}', model: '${model}'...`);
 
     // Provider Health & Credential Verification (Zero fallback rule!)
     if (provider === 'gemini') {
@@ -604,7 +688,7 @@ Output ONLY the JSON object.`;
       if (onProgress) onProgress(1, 6, 'Pass 1: Generating Structured Chapter Outline...');
       console.log(`[ScriptService] Pass 1: Generating structured outline for ${bookName} ${chapter}...`);
 
-      const outlineRes = await this.generateChapterOutline(bookName, chapter, chapterData.verses, provider, model, { isShorts });
+      const outlineRes = await this.generateChapterOutline(bookName, chapter, chapterData.verses, provider, model, { isShorts, scriptType: activeScriptType });
       outline = outlineRes.outline;
       console.log(`[ScriptService] Pass 1 complete: ${outline.sections.length} thematic sections created.`);
 
@@ -635,11 +719,12 @@ Output ONLY the JSON object.`;
         const isFirstSection = (i === 0);
         const isLastSection = (i === outline.sections.length - 1);
 
-        console.log(`[ScriptService] Pass 2 [${i + 1}/${outline.sections.length}]: Writing "${sec.section_title}" (${sec.verse_range})...`);
+        console.log(`[ScriptService] Pass 2 [${i + 1}/${outline.sections.length}]: Writing "${sec.section_title}" (${sec.verse_range}) in [${activeScriptType}] style...`);
         const secRes = await this.generateSectionNarration(bookName, chapter, sec, versesForSection, rollingMemory, provider, model, {
           isShorts,
           isFirstSection,
-          isLastSection
+          isLastSection,
+          scriptType: activeScriptType
         });
         let text = (secRes.text || '').trim();
         if (!text || text.length < 15) {
@@ -666,6 +751,7 @@ Output ONLY the JSON object.`;
     const perfMetrics = {
       provider,
       model,
+      scriptType: activeScriptType,
       totalDurationMs,
       durationSeconds: parseFloat((totalDurationMs / 1000).toFixed(2)),
       totalTokens,
@@ -695,7 +781,7 @@ Output ONLY the JSON object.`;
       outline
     };
 
-    // Save into SQLite scripts table with model_used, generation_metrics, and is_approved = 0
+    // Save into SQLite scripts table with model_used, generation_metrics, script_type, and is_approved = 0
     run(`DELETE FROM scripts WHERE project_id = ? AND version = 1`, [projectId]);
 
     const insertScript = db.prepare(`
@@ -703,8 +789,8 @@ Output ONLY the JSON object.`;
         project_id, version, hook, biblical_context, core_narrative,
         theological_insight, practical_application, call_to_action,
         full_narration_text, word_count, estimated_read_time_seconds,
-        model_used, generation_metrics, is_approved
-      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        model_used, generation_metrics, script_type, is_approved
+      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     `);
 
     insertScript.run(
@@ -719,7 +805,8 @@ Output ONLY the JSON object.`;
       words,
       readTimeSec,
       engineDisplayName,
-      JSON.stringify(perfMetrics)
+      JSON.stringify(perfMetrics),
+      activeScriptType
     );
 
     // Build scene segments conforming to Stage 3 standardized prompt builder
@@ -735,6 +822,7 @@ Output ONLY the JSON object.`;
       book: bookName,
       chapter,
       modelUsed: engineDisplayName,
+      scriptType: activeScriptType,
       totalScenes: segments.length,
       scenes: segments.map(s => ({
         sceneNumber: s.segment_order,
@@ -755,14 +843,15 @@ Output ONLY the JSON object.`;
     // Save Script.txt, Scene_Descriptions.json, Scene_Descriptions.txt, Script_Outline.json
     this.saveScriptAndSceneFiles(projectId, project, scriptContent, sceneDescriptionsObj, outline);
 
-    // Update Project Status
+    // Update Project Status & script_type
     run(`
       UPDATE projects 
       SET status = 'SCRIPTED',
           target_duration_seconds = ?,
+          script_type = ?,
           updated_at = CURRENT_TIMESTAMP 
       WHERE id = ?
-    `, [readTimeSec, projectId]);
+    `, [readTimeSec, activeScriptType, projectId]);
 
     // Generate Stage 5 SEO Metadata (3 title options < 70 chars, timestamps, synthetic media notice)
     const seoData = seoService.generateMetadata(projectId);
@@ -773,6 +862,8 @@ Output ONLY the JSON object.`;
       provider,
       engine: engineDisplayName,
       model: engineDisplayName,
+      scriptType: activeScriptType,
+      scriptTypeInfo: typeConfig,
       script: scriptContent,
       outline,
       repetitionReport,
@@ -891,8 +982,13 @@ Output ONLY the JSON object.`;
       if (script.scene_descriptions) sceneDesc = JSON.parse(script.scene_descriptions);
     } catch (e) { }
 
+    const rawType = script.script_type || 'DOCUMENTARY';
+    const typeInfo = SCRIPT_TYPES[rawType.toUpperCase()] || SCRIPT_TYPES.DOCUMENTARY;
+
     return {
       ...script,
+      script_type: rawType,
+      script_type_info: typeInfo,
       is_approved: Boolean(script.is_approved),
       generation_metrics: metrics,
       scene_descriptions: sceneDesc
@@ -912,6 +1008,7 @@ Output ONLY the JSON object.`;
     const theological_insight = scriptData.theological_insight !== undefined ? scriptData.theological_insight : script.theological_insight;
     const practical_application = scriptData.practical_application !== undefined ? scriptData.practical_application : script.practical_application;
     const call_to_action = scriptData.call_to_action !== undefined ? scriptData.call_to_action : script.call_to_action;
+    const script_type = (scriptData.script_type || scriptData.scriptType || script.script_type || 'DOCUMENTARY').toUpperCase();
 
     const full_text = scriptData.full_narration_text || [hook, biblical_context, core_narrative, theological_insight, practical_application, call_to_action].filter(Boolean).join('\n\n');
     const word_count = full_text.trim().split(/\s+/).length;
@@ -921,9 +1018,16 @@ Output ONLY the JSON object.`;
       UPDATE scripts
       SET hook = ?, biblical_context = ?, core_narrative = ?,
           theological_insight = ?, practical_application = ?, call_to_action = ?,
-          full_narration_text = ?, word_count = ?, estimated_read_time_seconds = ?
+          full_narration_text = ?, word_count = ?, estimated_read_time_seconds = ?,
+          script_type = ?
       WHERE id = ?
-    `, [hook, biblical_context, core_narrative, theological_insight, practical_application, call_to_action, full_text, word_count, readTimeSec, script.id]);
+    `, [hook, biblical_context, core_narrative, theological_insight, practical_application, call_to_action, full_text, word_count, readTimeSec, script_type, script.id]);
+
+    run(`
+      UPDATE projects
+      SET script_type = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [script_type, projectId]);
 
     return this.getScript(projectId);
   }

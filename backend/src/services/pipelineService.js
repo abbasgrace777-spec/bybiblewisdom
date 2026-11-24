@@ -100,9 +100,11 @@ class PipelineService {
         const promptModeService = require('./promptModeService');
         scriptResult = await promptModeService.approveAndGenerateScript(projectId);
       } else {
-        notify(2, 'Generating Original Bible-Accurate Script & Scene Cues', 22);
-        scriptResult = await scriptService.generateScriptForProject(projectId, options, (cur, total, msg) => {
-          notify(2, msg || 'Generating Script & Scene Cues', 22 + Math.round((cur / total) * 11));
+        const activeTypeKey = options.scriptType || project.script_type || (project.format === 'SHORTS' ? 'SHORTS_55S' : 'DOCUMENTARY');
+        const typeInfo = scriptService.getScriptType(activeTypeKey);
+        notify(2, `Generating Script (${typeInfo.name})`, 22);
+        scriptResult = await scriptService.generateScriptForProject(projectId, { ...options, scriptType: activeTypeKey }, (cur, total, msg) => {
+          notify(2, msg || `Generating Script & Scenes (${typeInfo.shortName})`, 22 + Math.round((cur / total) * 11));
         });
       }
 

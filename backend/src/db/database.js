@@ -50,7 +50,8 @@ function initializeDatabase() {
       { name: 'is_approved', sql: 'ALTER TABLE scripts ADD COLUMN is_approved BOOLEAN DEFAULT 0;' },
       { name: 'model_used', sql: 'ALTER TABLE scripts ADD COLUMN model_used TEXT;' },
       { name: 'generation_metrics', sql: 'ALTER TABLE scripts ADD COLUMN generation_metrics TEXT;' },
-      { name: 'scene_descriptions', sql: 'ALTER TABLE scripts ADD COLUMN scene_descriptions TEXT;' }
+      { name: 'scene_descriptions', sql: 'ALTER TABLE scripts ADD COLUMN scene_descriptions TEXT;' },
+      { name: 'script_type', sql: "ALTER TABLE scripts ADD COLUMN script_type TEXT DEFAULT 'DOCUMENTARY';" }
     ];
     for (const sn of scriptNeeded) {
       if (!scriptCols.includes(sn.name)) {
@@ -79,7 +80,8 @@ function initializeDatabase() {
       { name: 'error_message', sql: 'ALTER TABLE projects ADD COLUMN error_message TEXT;' },
       { name: 'current_step', sql: 'ALTER TABLE projects ADD COLUMN current_step INTEGER DEFAULT 1;' },
       { name: 'current_step_name', sql: 'ALTER TABLE projects ADD COLUMN current_step_name TEXT;' },
-      { name: 'progress_percent', sql: 'ALTER TABLE projects ADD COLUMN progress_percent INTEGER DEFAULT 0;' }
+      { name: 'progress_percent', sql: 'ALTER TABLE projects ADD COLUMN progress_percent INTEGER DEFAULT 0;' },
+      { name: 'script_type', sql: "ALTER TABLE projects ADD COLUMN script_type TEXT DEFAULT 'DOCUMENTARY';" }
     ];
     for (const pn of projectNeeded) {
       if (!projectCols.includes(pn.name)) {

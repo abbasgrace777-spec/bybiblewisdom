@@ -330,8 +330,16 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
               <h3 className="text-sm sm:text-base font-bold text-slate-100 truncate max-w-md">
                 {isEditMode ? 'Manual Studio — Edit Script & Video' : project.title}
               </h3>
-              <p className="text-[11px] sm:text-xs text-amber-400/90 font-medium">
-                {project.format} • {project.category.replace('_', ' ')} • {isEditMode ? `${segments.length} Scenes Loaded` : 'One-Click Pipeline'}
+              <p className="text-[11px] sm:text-xs text-amber-400/90 font-medium flex items-center gap-2 flex-wrap mt-0.5">
+                <span>{project.format}</span>
+                <span>•</span>
+                <span>{project.category.replace('_', ' ')}</span>
+                <span>•</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                  Style: {project.script_type || (project.format === 'SHORTS' ? '55s Scripture Short' : 'Canonical Documentary')}
+                </span>
+                <span>•</span>
+                <span>{isEditMode ? `${segments.length} Scenes Loaded` : 'One-Click Pipeline'}</span>
               </p>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { api } from '../services/api';
 export default function CreateVideoView({ onProjectCreated, bibleBooks = [] }) {
   const [activeMode, setActiveMode] = useState('MODE_A'); // 'MODE_A' (Chapter) or 'MODE_B' (Prompt)
   const [format, setFormat] = useState('SHORTS');
+  const [scriptType, setScriptType] = useState('DOCUMENTARY');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -33,6 +34,7 @@ export default function CreateVideoView({ onProjectCreated, bibleBooks = [] }) {
         topic: `${selectedBook} Chapter ${chapter}`,
         category,
         format,
+        script_type: scriptType,
         bible_book: selectedBook,
         chapter_start: parseInt(chapter, 10),
         chapter_end: parseInt(chapter, 10),
@@ -156,7 +158,7 @@ export default function CreateVideoView({ onProjectCreated, bibleBooks = [] }) {
 
           <button
             type="button"
-            onClick={() => setFormat('LONG_FORM')}
+            onClick={() => { setFormat('LONG_FORM'); if (scriptType === 'SHORTS_55S') setScriptType('DOCUMENTARY'); }}
             className={`p-3 rounded-lg border text-left transition-colors flex items-center gap-3 ${
               format === 'LONG_FORM'
                 ? 'border-amber-500 bg-amber-500/10 text-slate-100'
@@ -170,6 +172,27 @@ export default function CreateVideoView({ onProjectCreated, bibleBooks = [] }) {
             </div>
           </button>
         </div>
+      </div>
+
+      {/* Script Generation Style Selector */}
+      <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          Script Generation Style
+        </label>
+        <select
+          value={scriptType}
+          onChange={(e) => setScriptType(e.target.value)}
+          className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-amber-300 font-semibold focus:outline-none focus:border-amber-500"
+        >
+          <option value="DOCUMENTARY">1. Verse-by-Verse Canonical Documentary (Reverent & Scholarly Exposition)</option>
+          <option value="DEVOTIONAL">2. Sacred Devotional & Healing Prayer (Peaceful, Comforting & Meditative)</option>
+          <option value="ARCHAEOLOGY">3. Biblical Archaeology & Historical Evidence (Investigative & Ancient Near East)</option>
+          <option value="DRAMATIC">4. Epic High-Retention Narrative & Climax (Cinematic Storytelling & Deliverance)</option>
+          <option value="SHORTS_55S">5. Fast 55s Scripture Short (Punchy Hook, Key Truth & Viral Retention)</option>
+        </select>
+        <p className="text-[11px] text-slate-400 mt-1.5">
+          Guides Ollama and the Chapter Engine in writing the exact narrative tone, depth, and pacing.
+        </p>
       </div>
 
       {/* Error alert if any */}

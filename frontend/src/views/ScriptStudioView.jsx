@@ -2,9 +2,77 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileText, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, ArrowRight, 
   Cpu, Terminal, Zap, Film, Layers, Check, AlertTriangle, Download, 
-  Sliders, Eye, HardDrive, Play, ChevronDown, ChevronUp
+  Sliders, Eye, HardDrive, Play, ChevronDown, ChevronUp, BookOpen, Heart, Compass, Flame, Scroll
 } from 'lucide-react';
 import { api } from '../services/api';
+
+const SCRIPT_TYPES = [
+  {
+    id: 'DOCUMENTARY',
+    label: '1. Verse-by-Verse Canonical Documentary',
+    shortName: 'Canonical Documentary',
+    tag: 'Canonical Exposition',
+    tone: 'Reverent & Scholarly',
+    pacing: '180–220 words / section (~15–20 mins)',
+    color: 'border-amber-500/40 text-amber-300 bg-amber-500/10',
+    badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    accentBorder: 'border-amber-500/30',
+    icon: Scroll,
+    desc: 'Systematic verse-by-verse chapter exposition with Hebrew & Greek word insights, ancient Near Eastern cultural context, and Christological fulfillment.'
+  },
+  {
+    id: 'DEVOTIONAL',
+    label: '2. Sacred Devotional & Healing Prayer',
+    shortName: 'Devotional & Prayer',
+    tag: 'Comfort & Prayer',
+    tone: 'Peaceful, Comforting & Meditative',
+    pacing: '160–200 words / section (Unhurried cadence)',
+    color: 'border-emerald-500/40 text-emerald-300 bg-emerald-500/10',
+    badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    accentBorder: 'border-emerald-500/30',
+    icon: Heart,
+    desc: 'Calm, comforting scripture meditation and heartfelt prayer for soul rest, healing, anxiety relief, and personal closeness with God.'
+  },
+  {
+    id: 'ARCHAEOLOGY',
+    label: '3. Biblical Archaeology & Historical Evidence',
+    shortName: 'Archaeology & History',
+    tag: 'Artifacts & Manuscripts',
+    tone: 'Investigative & Academic',
+    pacing: '190–230 words / section (Evidence-rich)',
+    color: 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10',
+    badgeBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    accentBorder: 'border-cyan-500/30',
+    icon: Compass,
+    desc: 'Historical artifacts, ancient clay tablets, Dead Sea Scrolls, city excavations, and manuscript discoveries confirming biblical events.'
+  },
+  {
+    id: 'DRAMATIC',
+    label: '4. Epic High-Retention Narrative & Climax',
+    shortName: 'Epic Narrative',
+    tag: 'High Tension & Climax',
+    tone: 'Cinematic & Arresting',
+    pacing: '180–210 words / section (Dynamic storytelling)',
+    color: 'border-rose-500/40 text-rose-300 bg-rose-500/10',
+    badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+    accentBorder: 'border-rose-500/30',
+    icon: Flame,
+    desc: 'High-suspense cinematic storytelling emphasizing spiritual conflict, character stakes, divine intervention, and majestic climax.'
+  },
+  {
+    id: 'SHORTS_55S',
+    label: '5. Fast 55s Scripture Short',
+    shortName: '55s Short',
+    tag: 'Viral Retention',
+    tone: 'Punchy & Arresting',
+    pacing: '120–140 words total (55 seconds)',
+    color: 'border-purple-500/40 text-purple-300 bg-purple-500/10',
+    badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    accentBorder: 'border-purple-500/30',
+    icon: Zap,
+    desc: 'Rapid vertical format jumping straight into a gripping hook, core scripture truth, and memorable spiritual takeaway.'
+  }
+];
 
 export default function ScriptStudioView({ projects = [], activeProjectId, onSelectProject, setActiveTab }) {
   const currentProject = projects.find(p => p.id === activeProjectId) || projects[0];
@@ -17,6 +85,7 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
   const [application, setApplication] = useState('');
   const [cta, setCta] = useState('');
   const [fullNarration, setFullNarration] = useState('');
+  const [scriptType, setScriptType] = useState('DOCUMENTARY');
 
   // Ollama status & model selection
   const [ollamaStatus, setOllamaStatus] = useState({ running: false, url: 'http://localhost:11434', version: null, error: null });
@@ -84,6 +153,15 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
         setCta(s.call_to_action || '');
         setFullNarration(s.full_narration_text || '');
         setIsApproved(Boolean(s.is_approved));
+        if (s.script_type) {
+          setScriptType(s.script_type);
+        } else if (currentProject?.script_type) {
+          setScriptType(currentProject.script_type);
+        } else if (currentProject?.format === 'SHORTS') {
+          setScriptType('SHORTS_55S');
+        } else {
+          setScriptType('DOCUMENTARY');
+        }
         if (s.generation_metrics) {
           setPerfMetrics(s.generation_metrics);
           if (s.generation_metrics.repetitionReport) setRepetitionReport(s.generation_metrics.repetitionReport);
@@ -95,6 +173,13 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
         // Fallback: check project object
         const pRes = await api.getProject(id);
         const p = pRes.data;
+        if (p?.script_type) {
+          setScriptType(p.script_type);
+        } else if (p?.format === 'SHORTS') {
+          setScriptType('SHORTS_55S');
+        } else {
+          setScriptType('DOCUMENTARY');
+        }
         if (p?.scripts && p.scripts.length > 0) {
           const s = p.scripts[0];
           setHook(s.hook || '');
@@ -104,6 +189,7 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
           setApplication(s.practical_application || '');
           setCta(s.call_to_action || '');
           setFullNarration(s.full_narration_text || '');
+          if (s.script_type) setScriptType(s.script_type);
         }
       }
     } catch (e) {
@@ -139,12 +225,14 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
     if (!currentProject) return;
     setGenerating(true);
     setErrorMessage(null);
-    setGenStep(engine === 'ollama' ? `Validating chapter and calling Ollama (${selectedModel})...` : 'Building from Chapter Knowledge Engine...');
+    const activeTypeObj = SCRIPT_TYPES.find(st => st.id === scriptType) || SCRIPT_TYPES[0];
+    setGenStep(engine === 'ollama' ? `Writing ${activeTypeObj.shortName} script via Ollama (${selectedModel})...` : 'Building from Chapter Knowledge Engine...');
 
     try {
       const res = await api.generateScriptWithOllama(currentProject.id, {
         engine,
         model: selectedModel,
+        scriptType,
         temperature,
         top_p: topP,
         num_ctx: numCtx,
@@ -163,6 +251,7 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
         setFullNarration(s.full_text || '');
         setIsApproved(false);
 
+        if (res.data.scriptType) setScriptType(res.data.scriptType);
         if (res.data.performance) setPerfMetrics(res.data.performance);
         if (res.data.sceneDescriptions) setSceneDescriptions(res.data.sceneDescriptions);
         if (res.data.outline) setScriptOutline(res.data.outline);
@@ -186,6 +275,7 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
         theological_insight: theology,
         practical_application: application,
         call_to_action: cta,
+        script_type: scriptType,
         full_narration_text: fullNarration || [hook, context, narrative, theology, application, cta].filter(Boolean).join('\n\n')
       });
       if (res.success) {
@@ -213,21 +303,30 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
   const wordCount = calculatedFullScript ? calculatedFullScript.split(/\s+/).length : 0;
   const estimatedSeconds = Math.round((wordCount / 135) * 60);
   const isShorts = currentProject?.format === 'SHORTS';
+  const activeScriptTypeObj = SCRIPT_TYPES.find(st => st.id === scriptType) || SCRIPT_TYPES[0];
+  const ActiveTypeIcon = activeScriptTypeObj.icon || FileText;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* 1. Header & Project Selector */}
       <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
               <FileText className="w-5 h-5 text-amber-400" />
               <span>Ollama AI Script Studio</span>
             </h2>
+
+            {/* Script Type Badge */}
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border flex items-center gap-1.5 ${activeScriptTypeObj.badgeBg}`}>
+              <ActiveTypeIcon className="w-3.5 h-3.5" />
+              <span>Style: {activeScriptTypeObj.shortName}</span>
+            </span>
+
             {isApproved ? (
               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Script Approved by Director</span>
+                <span>Script Approved</span>
               </span>
             ) : (
               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
@@ -237,7 +336,7 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
             )}
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Local Ollama pipeline • Chapter-by-Chapter Scripture Analysis • Sequential Generation • Zero Silent Substitutions
+            Local Ollama pipeline • Chapter-by-Chapter Scripture Analysis • Sequential Generation • Style: {activeScriptTypeObj.label}
           </p>
         </div>
 
@@ -264,13 +363,13 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
           >
             <Zap className={`w-4 h-4 ${generating ? 'animate-spin' : 'fill-slate-950'}`} />
-            <span>{generating ? 'Generating with Ollama...' : `Generate Script (${selectedModel})`}</span>
+            <span>{generating ? 'Generating with Ollama...' : `Generate ${activeScriptTypeObj.shortName} (${selectedModel})`}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Ollama Status & Model Control Bar (Requirements 1, 2, 3, 10) */}
-      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* 2. Ollama Status & Model Control Bar with Script Type Selector */}
+      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4 flex-wrap">
         {/* Status Indicator */}
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2">
@@ -295,35 +394,50 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
           </button>
         </div>
 
-        {/* Model Switcher & Pull Input */}
-        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-          <span className="text-xs text-slate-400 flex items-center gap-1">
-            <Cpu className="w-3.5 h-3.5 text-amber-400" />
-            <span>Model:</span>
-          </span>
-
-          <select
-            value={selectedModel}
-            onChange={(e) => handleModelChange(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-400"
-          >
-            <option value="qwen3:4b">qwen3:4b (Default Recommended)</option>
-            <option value="qwen3:8b">qwen3:8b (Alternative High Precision)</option>
-            {installedModels
-              .filter(m => m.name !== 'qwen3:4b' && m.name !== 'qwen3:8b')
-              .map(m => (
-                <option key={m.name} value={m.name}>{m.name} ({m.sizeGB} GB)</option>
+        {/* Script Type & Model Switcher Bar */}
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+          {/* Script Type Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-xs text-slate-300 font-medium">Script Style:</span>
+            <select
+              value={scriptType}
+              onChange={(e) => setScriptType(e.target.value)}
+              className="bg-slate-900 border border-amber-500/40 rounded-lg px-2.5 py-1 text-xs text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
+            >
+              {SCRIPT_TYPES.map(st => (
+                <option key={st.id} value={st.id}>{st.label}</option>
               ))}
-          </select>
+            </select>
+          </div>
+
+          {/* Model Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <Cpu className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-xs text-slate-400">Model:</span>
+            <select
+              value={selectedModel}
+              onChange={(e) => handleModelChange(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-400"
+            >
+              <option value="qwen3:4b">qwen3:4b (Default Recommended)</option>
+              <option value="qwen3:8b">qwen3:8b (Alternative High Precision)</option>
+              {installedModels
+                .filter(m => m.name !== 'qwen3:4b' && m.name !== 'qwen3:8b')
+                .map(m => (
+                  <option key={m.name} value={m.name}>{m.name} ({m.sizeGB} GB)</option>
+                ))}
+            </select>
+          </div>
 
           {/* Quick Pull / Install Model */}
-          <div className="flex items-center gap-1.5 ml-2">
+          <div className="flex items-center gap-1.5">
             <input
               type="text"
               placeholder="e.g. qwen3:4b"
               value={pullModelName}
               onChange={(e) => setPullModelName(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 w-28 focus:outline-none focus:border-amber-500"
+              className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 w-24 focus:outline-none focus:border-amber-500"
             />
             <button
               onClick={handlePullModel}
@@ -336,11 +450,66 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
 
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 ml-1"
+            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800"
             title="Toggle Generation Hyperparameters"
           >
             <Sliders className="w-3.5 h-3.5" />
           </button>
+        </div>
+      </div>
+
+      {/* Script Style Detailed Spec Card & 1-Click Switcher */}
+      <div className={`p-4 rounded-xl border bg-gradient-to-r ${activeScriptTypeObj.color} space-y-3`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
+          <div className="flex items-center gap-2.5">
+            <ActiveTypeIcon className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-100 text-sm">{activeScriptTypeObj.label}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-900/80 border border-slate-700 text-amber-300">
+                  {activeScriptTypeObj.tag}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                {activeScriptTypeObj.desc}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs flex-shrink-0">
+            <div className="px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800/80">
+              <span className="text-[10px] text-slate-400 uppercase block">Tone</span>
+              <strong className="text-slate-200">{activeScriptTypeObj.tone}</strong>
+            </div>
+            <div className="px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800/80">
+              <span className="text-[10px] text-slate-400 uppercase block">Target Pacing</span>
+              <strong className="text-amber-300">{activeScriptTypeObj.pacing}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Style Switcher Pills */}
+        <div className="flex items-center gap-2 flex-wrap pt-0.5">
+          <span className="text-[11px] font-semibold text-slate-400 mr-1">Switch Style:</span>
+          {SCRIPT_TYPES.map(st => {
+            const Icon = st.icon;
+            const isSelected = st.id === scriptType;
+            return (
+              <button
+                key={st.id}
+                onClick={() => setScriptType(st.id)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  isSelected
+                    ? `${st.badgeBg} shadow-md`
+                    : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                <span>{st.shortName}</span>
+                {isSelected && <Check className="w-3 h-3 ml-0.5" />}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -496,8 +665,8 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            <span>Narration Script (Continuous Text)</span>
+            <ActiveTypeIcon className="w-4 h-4 text-amber-400" />
+            <span>Narration Script ({activeScriptTypeObj.shortName})</span>
           </button>
 
           <button
@@ -669,7 +838,7 @@ export default function ScriptStudioView({ projects = [], activeProjectId, onSel
               </div>
 
               <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 leading-relaxed">
-                💡 <strong>Documentary Pacing (~135 wpm):</strong> Pure narration track with zero background music. Designed for clear, reverent listening.
+                💡 <strong>{activeScriptTypeObj.shortName} Pacing:</strong> {activeScriptTypeObj.pacing}. Pure spoken narration track with zero background music. Designed for clear, reverent listening.
               </div>
 
               {/* Approval status banner */}

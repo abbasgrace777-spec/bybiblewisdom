@@ -82,24 +82,28 @@ class ProjectService {
     fs.mkdirSync(path.join(projectDir, 'images'), { recursive: true });
     fs.mkdirSync(path.join(projectDir, 'output'), { recursive: true });
 
+    const format = data.format || 'SHORTS';
+    const scriptType = data.script_type || data.scriptType || (format === 'SHORTS' ? 'SHORTS_55S' : 'DOCUMENTARY');
+
     run(`
       INSERT INTO projects (
         id, title, topic, category, format, status,
         bible_book, chapter_start, chapter_end, verses_referenced,
-        bible_translation, target_duration_seconds
-      ) VALUES (?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?)
+        bible_translation, target_duration_seconds, script_type
+      ) VALUES (?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       data.title || 'Untitled Project',
       data.topic || '',
       data.category || 'BIBLE_BOOK',
-      data.format || 'SHORTS',
+      format,
       data.bible_book || data.bibleBook || null,
       data.chapter_start || data.chapterStart || 1,
       data.chapter_end || data.chapterEnd || data.chapter_start || data.chapterStart || 1,
       data.verses_referenced || data.versesReferenced || '',
       data.bible_translation || data.bibleTranslation || 'WEB',
-      data.format === 'SHORTS' ? 60 : (data.target_duration_seconds || data.targetDurationSeconds || 600)
+      format === 'SHORTS' ? 60 : (data.target_duration_seconds || data.targetDurationSeconds || 600),
+      scriptType
     ]);
 
     // Initialize compliance audit record
@@ -336,6 +340,27 @@ class ProjectService {
       assets,
       upload
     };
+  }
+
+  /**
+   * Update project details
+   */
+  updateProject(id, data) {
+    const project = get(`SELECT * FROM projects WHERE id = ?`, [id]);
+    if (!project) throw new Error('Project not found');
+
+    const title = data.title !== undefined ? data.title : project.title;
+    const topic = data.topic !== undefined ? data.topic : project.topic;
+    const category = data.category !== undefined ? data.category : project.category;
+    const script_type = data.script_type || data.scriptType || project.script_type || 'DOCUMENTARY';
+
+    run(`
+      UPDATE projects
+      SET title = ?, topic = ?, category = ?, script_type = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [title, topic, category, script_type, id]);
+
+    return this.getProjectById(id);
   }
 
   /**

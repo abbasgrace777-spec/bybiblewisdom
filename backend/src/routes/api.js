@@ -230,6 +230,15 @@ router.post(['/ollama/test', '/settings/test-ollama'], async (req, res) => {
 });
 
 // --- 5. Script & Scene Generation ---
+router.get('/script-types', (req, res) => {
+  try {
+    const types = scriptService.getScriptTypes();
+    res.json({ success: true, data: types });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.post(['/projects/:id/generate-script', '/projects/:id/script'], async (req, res) => {
   try {
     const result = await scriptService.generateScriptForProject(req.params.id, req.body);
