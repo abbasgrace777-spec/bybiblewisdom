@@ -166,6 +166,17 @@ export const api = {
     body: JSON.stringify({ ideogramApiKey })
   }),
 
+  // Storage & Automated Cleanup (4-5 Days Retention)
+  getStorageStats: () => fetchJson('/storage/status'),
+  executeCleanup: (options = {}) => fetchJson('/storage/cleanup', {
+    method: 'POST',
+    body: JSON.stringify(options)
+  }),
+  updateStorageSettings: (settings = {}) => fetchJson('/storage/settings', {
+    method: 'POST',
+    body: JSON.stringify(settings)
+  }),
+
   // Ready to Upload Studio (Replaces direct upload & copyright log)
   getReadyToUpload: (id) => fetchJson(`/projects/${id}/ready-to-upload`),
   getYouTubeStatus: () => fetchJson('/youtube/status'),

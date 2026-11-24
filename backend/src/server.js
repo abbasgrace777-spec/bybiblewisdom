@@ -4,11 +4,15 @@ const path = require('node:path');
 const fs = require('node:fs');
 const config = require('./config');
 const apiRoutes = require('./routes/api');
+const cleanupService = require('./services/cleanupService');
 
 // Initialize database schema and seeds if not already done
 require('./db/database');
 const { runAllSeeds } = require('./db/seeds');
 runAllSeeds();
+
+// Start automated background storage cleanup (purges temp & aged files older than 4-5 days)
+cleanupService.startScheduledCleanup();
 
 const app = express();
 

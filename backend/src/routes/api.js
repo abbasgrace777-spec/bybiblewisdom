@@ -28,6 +28,7 @@ const ollamaService = require('../services/ollamaService');
 const categoryService = require('../services/categoryService');
 const calendarService = require('../services/calendarService');
 const researchSourcesService = require('../services/researchSourcesService');
+const cleanupService = require('../services/cleanupService');
 const promptModeService = require('../services/promptModeService');
 const aiService = require('../services/aiService');
 const config = require('../config');
@@ -1294,6 +1295,34 @@ router.post('/settings', (req, res) => {
     }
 
     res.json({ success: true, message: 'Settings saved successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- Storage Management & Automated Cleanup (4-5 Days Retention) ---
+router.get('/storage/status', (req, res) => {
+  try {
+    const stats = cleanupService.getStorageStats();
+    res.json({ success: true, data: stats });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/storage/cleanup', (req, res) => {
+  try {
+    const result = cleanupService.executeCleanup(req.body || {});
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/storage/settings', (req, res) => {
+  try {
+    const updated = cleanupService.updateSettings(req.body);
+    res.json({ success: true, data: updated, message: 'Storage cleanup settings updated' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
