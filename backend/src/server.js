@@ -30,7 +30,7 @@ const frontendDist = path.join(config.PATHS.FRONTEND, 'dist');
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/storage')) {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/storage') && !req.path.startsWith('/data') && !req.path.startsWith('/packages')) {
       return res.sendFile(path.join(frontendDist, 'index.html'));
     }
     next();
@@ -47,11 +47,12 @@ if (fs.existsSync(frontendDist)) {
   });
 }
 
-// Start listening
-const server = app.listen(config.PORT, () => {
+// Start listening on 0.0.0.0 for reliable local IPv4 and IPv6 access
+const server = app.listen(config.PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
   console.log(`  BYBIBLEWISDOM AI STUDIO — SYSTEM ONLINE           `);
   console.log(`  App Dashboard: http://localhost:${config.PORT}     `);
+  console.log(`  Frontend UI:   http://localhost:${config.CLIENT_PORT || 3000} `);
   console.log(`  Database:      ${config.PATHS.DB_FILE}            `);
   console.log(`  FFmpeg:        ${config.PATHS.FFMPEG}             `);
   console.log(`====================================================`);

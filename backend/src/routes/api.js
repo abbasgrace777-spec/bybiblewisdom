@@ -477,34 +477,56 @@ router.get('/projects/:id/quality-control', async (req, res) => {
   }
 });
 
-// --- Jesus Portrait Masterworks Library ---
+// --- Jesus Portrait Masterworks & Biblical Fine Art Library ---
 router.get('/library/jesus-photos', (req, res) => {
   try {
     const isShorts = (req.query.format || '').toUpperCase() === 'SHORTS' || req.query.isShorts === 'true';
     const subfolder = isShorts ? 'vertical' : 'horizontal';
-    const libraryDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', subfolder);
+    const jesusDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', subfolder);
+    const fineArtDir = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', subfolder);
 
-    if (!fs.existsSync(libraryDir)) {
-      return res.json({ success: true, count: 0, data: [] });
+    const photoList = [];
+
+    // 1. Jesus Christ Portrayals
+    if (fs.existsSync(jesusDir)) {
+      const files = fs.readdirSync(jesusDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+      for (const file of files) {
+        const nameWithoutExt = file.replace(/\.(jpg|png)$/i, '');
+        const title = nameWithoutExt
+          .split('_')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+          .replace(/\bAnd\b/g, '&');
+
+        photoList.push({
+          filename: file,
+          title,
+          category: 'JESUS',
+          url: `/data/jesus_photo_library/${subfolder}/${file}`,
+          format: isShorts ? 'SHORTS' : 'LONG_FORM'
+        });
+      }
     }
 
-    const files = fs.readdirSync(libraryDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+    // 2. Classical Biblical Masterpieces & Sacred Artwork
+    if (fs.existsSync(fineArtDir)) {
+      const fineFiles = fs.readdirSync(fineArtDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+      for (const file of fineFiles) {
+        const nameWithoutExt = file.replace(/\.(jpg|png)$/i, '');
+        const title = nameWithoutExt
+          .split('_')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
 
-    const photoList = files.map(file => {
-      const nameWithoutExt = file.replace(/\.(jpg|png)$/i, '');
-      const title = nameWithoutExt
-        .split('_')
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ')
-        .replace(/\bAnd\b/g, '&');
-
-      return {
-        filename: file,
-        title,
-        url: `/data/jesus_photo_library/${subfolder}/${file}`,
-        format: isShorts ? 'SHORTS' : 'LONG_FORM'
-      };
-    });
+        photoList.push({
+          filename: file,
+          title: `Biblical Masterpiece: ${title}`,
+          category: 'FINE_ART',
+          url: `/data/fine_art_library/${subfolder}/${file}`,
+          format: isShorts ? 'SHORTS' : 'LONG_FORM'
+        });
+      }
+    }
 
     res.json({ success: true, count: photoList.length, data: photoList });
   } catch (err) {
@@ -519,7 +541,19 @@ router.post('/projects/:id/segments/:order/select-library-image', (req, res) => 
 
     const isShorts = (format || '').toUpperCase() === 'SHORTS';
     const subfolder = isShorts ? 'vertical' : 'horizontal';
-    const sourcePath = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', subfolder, filename);
+    
+    // Check jesus library, fine art library, or natural library in priority
+    let sourcePath = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', subfolder, filename);
+    let engineLabel = 'Authentic Jesus Imagery';
+
+    if (!fs.existsSync(sourcePath)) {
+      sourcePath = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', subfolder, filename);
+      engineLabel = 'Classical Biblical Fine Art';
+    }
+    if (!fs.existsSync(sourcePath)) {
+      sourcePath = path.join(config.PATHS.ROOT, 'data', 'natural_photo_library', subfolder, filename);
+      engineLabel = 'Authentic Biblical Archaeology & Nature';
+    }
 
     if (!fs.existsSync(sourcePath)) {
       return res.status(404).json({ success: false, error: `Image not found in library: ${filename}` });
@@ -535,9 +569,9 @@ router.post('/projects/:id/segments/:order/select-library-image', (req, res) => 
     // Update DB
     run(`
       UPDATE script_segments
-      SET media_path = ?, image_status = 'AI_GENERATED', engine_used = 'Authentic Jesus Imagery'
+      SET media_path = ?, image_status = 'AI_GENERATED', engine_used = ?
       WHERE project_id = ? AND segment_order = ?
-    `, [targetPath, req.params.id, parseInt(req.params.order, 10)]);
+    `, [targetPath, engineLabel, req.params.id, parseInt(req.params.order, 10)]);
 
     // Invalidate cached clip
     const cachedClip = path.join(projectDir, 'clips', `scene_${req.params.order}.mp4`);

@@ -469,7 +469,10 @@ export default function OneClickProductionModal({ isOpen, onClose, project, onCo
                               alt={`Scene ${order}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.target.src = '/data/jesus_photo_library/vertical/jesus_portrait_compassion.jpg';
+                                const isShorts = (project?.format || '').toUpperCase() === 'SHORTS';
+                                e.target.src = isShorts 
+                                  ? '/data/jesus_photo_library/vertical/jesus_portrait_compassion.jpg'
+                                  : '/data/jesus_photo_library/horizontal/jesus_teaching_sermon_mount.jpg';
                               }}
                             />
                             <div className="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 rounded text-[9px] text-amber-300 font-mono">

@@ -459,12 +459,13 @@ class ImageService {
         }
 
         // Script-Accurate Image Selection:
-        // 1. Determine whether this scene specifically speaks of Jesus Christ or Old Testament/Biblical Narrative
+        // Prioritize authentic depiction of Jesus Christ, Gospel themes, and sacred biblical masterworks
         const sceneText = ((seg.narration_text || '') + ' ' + (seg.image_prompt || '') + ' ' + (seg.visual_description || '')).toLowerCase();
         const bookName = (project.bible_book || '').toLowerCase();
         const isNewTestament = /matthew|mark|luke|john|acts|romans|corinthians|galatians|ephesians|philippians|colossians|thessalonians|timothy|titus|philemon|hebrews|james|peter|jude|revelation/.test(bookName);
-        const mentionsJesus = /jesus|christ|savior|messiah|gospel|cross|resurrection|healing|prayer|bless/.test(sceneText + ' ' + (project.category || ''));
-        const useJesusLibrary = (isNewTestament || mentionsJesus || project.category === 'PRAYER_AND_DEVOTIONAL');
+        const mentionsJesus = /jesus|christ|savior|messiah|gospel|cross|resurrection|healing|prayer|bless|lord|amen|god|peace|faith|grace|love|comfort|hope/.test(sceneText + ' ' + (project.category || ''));
+        const isClosingScene = (i === segments.length - 1) || (seg.segment_order === segments.length);
+        const useJesusLibrary = (isNewTestament || mentionsJesus || isClosingScene || project.category === 'PRAYER_AND_DEVOTIONAL' || project.prefer_jesus_art);
 
         // Step 1: Attempt Dynamic Online Public Domain Artwork Fetching matching the exact scene text
         if (!isReady) {
@@ -498,22 +499,28 @@ class ImageService {
           } catch (_) {}
         }
 
-        // Step 2: Context-Aware Diverse Local Library Matching (Never duplicates across scenes or videos)
+        // Step 2: Context-Aware Diverse Local Library Matching (Authentic Jesus Art & Classical Fine Art)
         if (!isReady) {
           let selectedPhotoPath = null;
-          let engineLabel = 'Authentic Biblical Archive';
+          let engineLabel = 'Authentic Jesus Imagery';
 
           if (useJesusLibrary) {
             selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts, usedPhotosInProject);
             engineLabel = 'Authentic Jesus Imagery';
           } else {
-            // Old Testament / Nature / Historical Story: Pick from natural photography or classical fine art
+            // Narrative Scene: Prioritize Classical Biblical Fine Art
+            selectedPhotoPath = this.matchFineArtForScene(seg, project, isShorts);
+            engineLabel = 'Classical Biblical Fine Art';
+            if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
+              selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts, usedPhotosInProject);
+              engineLabel = 'Authentic Jesus Imagery';
+            }
+          }
+
+          // Fallback to verified biblical nature/archaeology (strictly zero modern elements)
+          if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
             selectedPhotoPath = this.matchNaturalPhotoForScene(seg, project, isShorts);
             engineLabel = 'Authentic Biblical Archaeology & Nature';
-            if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
-              selectedPhotoPath = this.matchFineArtForScene(seg, project, isShorts);
-              engineLabel = 'Classical Biblical Fine Art';
-            }
           }
 
           if (selectedPhotoPath && fs.existsSync(selectedPhotoPath)) {
