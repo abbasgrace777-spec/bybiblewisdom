@@ -27,6 +27,7 @@ export default function IdeogramStudioView({ setActiveTab }) {
 
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
+  const [thumbTimestamp, setThumbTimestamp] = useState(Date.now());
 
   useEffect(() => {
     fetchProjects();
@@ -75,6 +76,7 @@ export default function IdeogramStudioView({ setActiveTab }) {
         setHeadlineText(d.headlineText || '');
         setCustomPrompt(d.ideogramPrompt || '');
         setSubtitleText(d.subtitle || `${d.book?.toUpperCase() || 'BIBLE'} ${d.chapter || 1} • FULL EXPLANATION`);
+        setThumbTimestamp(Date.now());
       }
     } catch (e) {
       console.error(e);
@@ -106,6 +108,7 @@ export default function IdeogramStudioView({ setActiveTab }) {
 
       if (res.success && res.data) {
         setThumbnailData(res.data);
+        setThumbTimestamp(Date.now());
         setStatusMsg('1280x720 Thumbnail generated, optimized, and saved separately!');
         setTimeout(() => setStatusMsg(''), 4000);
       } else {
@@ -128,6 +131,7 @@ export default function IdeogramStudioView({ setActiveTab }) {
       });
       if (res.success && res.data) {
         setThumbnailData(res.data);
+        setThumbTimestamp(Date.now());
         setStatusMsg('Custom gold & white typography successfully applied to thumbnail!');
         setTimeout(() => setStatusMsg(''), 4000);
       }
@@ -151,6 +155,7 @@ export default function IdeogramStudioView({ setActiveTab }) {
         const res = await api.uploadIdeogramThumbnail(selectedProjectId, base64, file.type);
         if (res.success && res.data) {
           setThumbnailData(res.data);
+          setThumbTimestamp(Date.now());
           setStatusMsg('Manual Ideogram image uploaded, scaled to 1280x720, and optimized!');
           setTimeout(() => setStatusMsg(''), 4000);
         }
@@ -164,7 +169,9 @@ export default function IdeogramStudioView({ setActiveTab }) {
   };
 
   const selectedProj = projects.find(p => p.id === selectedProjectId);
-  const currentThumbUrl = thumbnailData?.thumbnailJpgUrl || (selectedProjectId ? `/storage/projects/${selectedProjectId}/output/thumbnail.jpg?t=${Date.now()}` : null);
+  const currentThumbUrl = selectedProjectId 
+    ? `/api/projects/${selectedProjectId}/thumbnail?t=${thumbTimestamp}`
+    : (thumbnailData?.thumbnailJpgUrl || null);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

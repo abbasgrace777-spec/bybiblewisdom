@@ -262,6 +262,20 @@ class IdeogramService {
 
     const chosenIndex = metadata?.chosenVariantIndex || 1;
 
+    let ideogramPrompt = metadata?.ideogramPrompt || '';
+    let promptVariations = [];
+    try {
+      const script = get(`SELECT * FROM scripts WHERE project_id = ?`, [projectId]);
+      promptVariations = this.buildThumbnailPrompts(book, chapter, project.title, script, project.topic || '');
+      if (!ideogramPrompt && promptVariations.length > 0) {
+        ideogramPrompt = promptVariations[chosenIndex - 1]?.prompt || promptVariations[0]?.prompt || '';
+      }
+    } catch (_) {}
+
+    if (!ideogramPrompt) {
+      ideogramPrompt = `Hyper-realistic cinematic YouTube thumbnail of ${book} Chapter ${chapter}, ${project.title}, 3D bold metallic gold typography "${metadata?.headlineText || 'SACRED SCRIPTURE'}", dramatic celestial golden rim lighting, 8k, highly detailed, photorealistic, ${isShorts ? '9:16 vertical' : '16:9 widescreen'}, no watermark`;
+    }
+
     return {
       projectId,
       book,
@@ -269,7 +283,8 @@ class IdeogramService {
       title: project.title,
       headlineText: metadata?.headlineText || `${book.toUpperCase()} ${chapter}`,
       visualMoment: metadata?.visualMoment || 'Sacred biblical narrative moment',
-      ideogramPrompt: metadata?.ideogramPrompt || '',
+      ideogramPrompt,
+      promptVariations,
       generationStatus: metadata?.generationStatus || (jpgSize > 0 ? 'GENERATED' : 'NOT_CONFIGURED'),
       provider: metadata?.provider || 'IDEOGRAM_2.0_API',
       licenseType: metadata?.licenseType || 'Ideogram Commercial Use',
@@ -684,6 +699,73 @@ class IdeogramService {
     `, [projectId, project.bible_book || 'Genesis', project.chapter_start || 1, project.title, targetJpgPath, targetPngPath, fileSize]);
 
     run(`UPDATE projects SET thumbnail_path = ? WHERE id = ?`, [targetJpgPath, projectId]);
+
+    return this.getThumbnailData(projectId);
+  }
+
+  /**
+   * Apply custom typography overlay onto thumbnail canvas
+   */
+  applyCustomTextOverlay(projectId, body = {}) {
+    const project = get(`SELECT * FROM projects WHERE id = ?`, [projectId]);
+    if (!project) throw new Error('Project not found');
+
+    const thumbnailService = require('./thumbnailService');
+    const isShorts = project.format === 'SHORTS';
+    const projectOutDir = path.join(config.PATHS.PROJECTS, projectId, 'output');
+    if (!fs.existsSync(projectOutDir)) fs.mkdirSync(projectOutDir, { recursive: true });
+
+    const headlineText = (body.headlineText || `${project.bible_book?.toUpperCase() || 'BIBLE'} ${project.chapter_start || 1}`).trim();
+    const subtitleText = (body.subtitleText || `${project.bible_book?.toUpperCase() || 'BIBLE'} ${project.chapter_start || 1} • FULL EXPLANATION`).trim();
+
+    // Find the best background image: raw background, variant 1, or scene 1 image
+    let bgPath = path.join(projectOutDir, 'raw_background.jpg');
+    if (!fs.existsSync(bgPath)) {
+      bgPath = path.join(projectOutDir, 'thumbnail_variant_1.jpg');
+    }
+    if (!fs.existsSync(bgPath)) {
+      bgPath = path.join(config.PATHS.PROJECTS, projectId, 'images', 'scene_1.jpg');
+    }
+    if (!fs.existsSync(bgPath)) {
+      const libDir = path.join(config.PATHS.ROOT, 'data', 'jesus_photo_library', isShorts ? 'vertical' : 'horizontal');
+      if (fs.existsSync(libDir)) {
+        const files = fs.readdirSync(libDir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
+        if (files.length > 0) bgPath = path.join(libDir, files[0]);
+      }
+    }
+
+    const words = headlineText.split(/\s+/).filter(Boolean);
+    const mid = Math.ceil(words.length / 2);
+    const line1 = words.slice(0, mid).join(' ');
+    const line2 = words.slice(mid).join(' ');
+
+    const variant = {
+      variantNumber: 1,
+      title: 'Custom Typography',
+      headlineText,
+      line1,
+      line2,
+      badgeText: project.category === 'PRAYER_AND_DEVOTIONAL' ? 'DAILY PRAYER' : `${project.bible_book?.toUpperCase() || 'BIBLE'} ${project.chapter_start || 1}`,
+      subText: subtitleText,
+      colorTheme: 'GOLD_WHITE',
+      accentColor: '#F59E0B'
+    };
+
+    const targetJpg = path.join(projectOutDir, 'thumbnail.jpg');
+    const target160 = path.join(projectOutDir, 'thumbnail_160px.jpg');
+
+    thumbnailService.renderCodeThumbnail(bgPath, variant, targetJpg, target160, project.bible_book || 'BIBLE', project.chapter_start || 1, isShorts);
+
+    // Update Thumbnail_Metadata.json
+    const metaPath = path.join(projectOutDir, 'Thumbnail_Metadata.json');
+    let metadata = {};
+    if (fs.existsSync(metaPath)) {
+      try { metadata = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch (_) {}
+    }
+    metadata.headlineText = headlineText;
+    metadata.subtitle = subtitleText;
+    metadata.updatedAt = new Date().toISOString();
+    fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2), 'utf8');
 
     return this.getThumbnailData(projectId);
   }
