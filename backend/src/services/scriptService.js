@@ -635,7 +635,7 @@ ${wordTargetInstruction}
     }
 
     const startTime = Date.now();
-    const engineDisplayName = isProviderAvailable 
+    const engineDisplayName = isProviderAvailable
       ? (provider === 'gemini' ? `Google Gemini (${model})` : `Ollama (${model})`)
       : 'Canonical Theological Engine';
 
@@ -1547,87 +1547,96 @@ Return as JSON:
           duration: 7.0
         }
       ];
-    } else if (isGenesis1) {
-      // --- GENESIS 1 LONG-FORM (STRICTLY MAX 15 SCENES, PACED 25-40s PER SCENE) ---
-      const motions = ['ZOOM_IN', 'PAN_LEFT', 'ZOOM_OUT', 'PAN_RIGHT', 'ZOOM_IN'];
-      const rawSections = scriptContent.sections || scriptContent.full_text.split('\n\n');
-
-      const genesis1VisualThemes = [
-        `Cinematic cosmic prologue, deep ancient sky with soft celestial golden dawn, peaceful sacred beginning of time, 8k, ${aspect}, no text, no watermark`,
-        `Verse 1: Majestic view of heavens and earth emerging from uncreated eternity, radiant soft golden aura, awe-inspiring tranquility, ${aspect}, no text, no watermark`,
-        `Verse 2: The Spirit of God like a gentle dove hovering over the primordial tranquil ocean waters, soft ethereal mist and peaceful ripples, ${aspect}, no text, no watermark`,
-        `Day 1 (Verses 3-5): Brilliant pure celestial golden light breaking through the darkness, radiating peace and divine order, ${aspect}, no text, no watermark`,
-        `Day 2 (Verses 6-8): Glorious expanse of the clear blue sky separating the waters above and waters below, peaceful cumulus clouds, ${aspect}, no text, no watermark`,
-        `Day 3 (Verses 9-10): Ancient continents and green coastlines rising gently from crystalline azure oceans, serene shores at dawn, ${aspect}, no text, no watermark`,
-        `Day 3 (Verses 11-13): Flourishing lush green fields, olive groves, blooming wildflowers, and fruit-bearing trees under warm golden sunlight, ${aspect}, no text, no watermark`,
-        `Day 4 (Verses 14-19): The golden sun illuminating the day, the silver moon in twilight, and brilliant stars shining in a peaceful night sky, ${aspect}, no text, no watermark`,
-        `Day 5 (Verses 20-23): Clear turquoise ocean teeming with gentle dolphins and colorful fish, and graceful birds flying across the open sky, ${aspect}, no text, no watermark`,
-        `Day 6 (Verses 24-25): Peaceful animals grazing on sunlit grassy hills—gentle deer, horses, and cattle living in tranquil harmony, ${aspect}, no text, no watermark`,
-        `Day 6 (Verses 26-27): Creation of mankind in the image of God, noble and peaceful man and woman standing in lush Eden at sunrise, radiant light, ${aspect}, no text, no watermark`,
-        `Day 7: The Seventh Day of sacred rest, serene ancient olive grove with golden afternoon light, deep peace, tranquil Sabbath stillness, ${aspect}, no text, no watermark`,
-        `Linguistic exposition: Ancient Hebrew manuscript illuminated by warm lantern glow on an olive wood desk, reverent study of the word Bara, ${aspect}, no text, no watermark`,
-        `Comforting spiritual application: Solitary person in peaceful contemplative prayer on mountain ridge overlooking sunrise, profound peace, ${aspect}, no text, no watermark`,
-        `Closing cinematic shot of an ancient open Holy Bible with radiant golden light illuminating the sacred pages of Genesis, museum quality, ${aspect}, no text, no watermark`
-      ];
-
-      const totalScenes = Math.min(genesis1VisualThemes.length, Math.max(3, rawSections.length));
-      const targetSec = project.target_duration_seconds || (totalScenes * 28);
-      const sceneDur = Math.max(15, Math.round(targetSec / totalScenes));
-
-      for (let i = 0; i < totalScenes; i++) {
-        let text = rawSections[i] || `Exposition of Genesis 1, movement ${i + 1}.`;
-        if (i === 0 && !text.toLowerCase().includes('bybiblewisdom')) {
-          text = `Welcome to ByBibleWisdom. Today, we step into the sacred beginning of Genesis Chapter 1. ${text}`.trim();
-        } else if (i === totalScenes - 1 && (!text.toLowerCase().includes('subscribe') || !text.toLowerCase().includes('amen'))) {
-          text = `${text} May the peace and grace of God guard your heart. If this message blessed your soul today, subscribe to ByBibleWisdom, share this light with someone in need, and leave your prayer or Amen in the comments below. God bless you.`.trim();
-        }
-        const visual = genesis1VisualThemes[i];
-        const motion = motions[i % motions.length];
-
-        segmentsData.push({
-          order: i + 1,
-          text,
-          visual,
-          motion,
-          duration: sceneDur
-        });
-      }
     } else {
-      // --- GENERAL LONG-FORM (STRICTLY MAX 15 SCENES, HIGH-CTR & AUTHENTIC) ---
-      const motions = ['ZOOM_IN', 'PAN_LEFT', 'ZOOM_OUT', 'PAN_RIGHT', 'ZOOM_IN'];
-      const rawSections = scriptContent.sections || scriptContent.full_text.split('\n\n');
+      // =========================================================================
+      // DYNAMIC GRANULAR SCENE SEGMENTATION FOR LONG-FORM VIDEOS (MAXIMUM IMAGES)
+      // Professional YouTube documentary pacing: 12-18 seconds per visual cut (~30-45 words).
+      // Yields 25 to 50+ rich scenes with diverse biblical & Jesus artwork.
+      // =========================================================================
+      const motions = ['ZOOM_IN', 'PAN_LEFT', 'ZOOM_OUT', 'PAN_RIGHT'];
 
-      const visualThemes = [
-        `Cinematic peaceful prologue, deep ancient Near Eastern sky at dawn, gold celestial light rays piercing desert mist, 8k, ${aspect}, no text, no watermark`,
-        `Sacred ancient library alcove, weathered scrolls of the biblical canon on cedar wood table, candlelight, peaceful, ${aspect}, no text, no watermark`,
-        `Ancient kingdoms of the biblical world, monumental stone columns and temples under warm peaceful sunset, archaeological authenticity, ${aspect}, no text, no watermark`,
-        `Devout ancient Hebrew scribe carefully inking parchment with reed pen, warm candlelight, dust motes in air, reverent focus, ${aspect}, no text, no watermark`,
-        `Archaeological excavation inside Dead Sea Qumran caves, ancient earthenware jars containing sheepskin scrolls, documentary still, ${aspect}, no text, no watermark`,
-        `Macro cinematic close-up of open ancient Hebrew Torah scroll with radiant golden sunbeam illuminating the holy text, ${aspect}, no text, no watermark`,
-        `Ancient linguistic scholar studying original Hebrew letters on weathered papyrus with antique brass magnifying glass, ${aspect}, no text, no watermark`,
-        `Archaeological excavation site in ancient Israel, uncovering ancient stone seal and inscribed clay bullae, golden hour sun, ${aspect}, no text, no watermark`,
-        `Atmospheric wide landscape of ancient Near East during biblical times, peaceful nomadic caravans traversing majestic valley, ${aspect}, no text, no watermark`,
-        `Dramatic biblical scene of God's sovereign covenant, peaceful clouds parting over mountain sanctuary with divine golden light, ${aspect}, no text, no watermark`,
-        `Awe-inspiring view of sacred desert oasis under starry night sky, campfire glowing, quiet contemplation of divine deliverance, ${aspect}, no text, no watermark`,
-        `Crimson sunrise over the mountains of Judea, prophetic radiance breaking through morning mist, epic documentary cinematography, ${aspect}, no text, no watermark`,
-        `Majestic panoramic view of temple mount in ancient Jerusalem at sunrise, soaring marble columns, holy reverent majesty, ${aspect}, no text, no watermark`,
-        `A devout believer in peaceful contemplative prayer on a mountain overlook at sunrise, serene surrender and unshakeable peace, ${aspect}, no text, no watermark`,
-        `Closing cinematic shot of an ancient open Holy Bible with radiant golden light illuminating the sacred pages, peaceful sanctuary atmosphere, museum quality, ${aspect}, no text, no watermark`
-      ];
+      // 1. Gather all narration text into sequential sections
+      let rawSections = scriptContent.sections || [];
+      if (!Array.isArray(rawSections) || rawSections.length === 0) {
+        if (scriptContent.full_text) {
+          rawSections = scriptContent.full_text.split(/\n\s*\n/).filter(s => s.trim().length > 0);
+        } else {
+          rawSections = [
+            scriptContent.hook || '',
+            scriptContent.biblical_context || '',
+            scriptContent.core_narrative || '',
+            scriptContent.theological_insight || '',
+            scriptContent.practical_application || '',
+            scriptContent.call_to_action || ''
+          ].filter(Boolean);
+        }
+      }
 
-      const totalScenes = Math.min(visualThemes.length, Math.max(3, rawSections.length));
-      const targetSec = project.target_duration_seconds || (totalScenes * 28);
-      const sceneDur = Math.max(15, Math.round(targetSec / totalScenes));
+      // 2. Break narration text into natural, sentence-aligned thought chunks
+      // Target: 28 to 44 words per scene (~12 to 18 seconds of narration)
+      const sceneChunks = [];
+      for (const section of rawSections) {
+        if (!section || typeof section !== 'string') continue;
+        const cleanSection = section.trim();
+        if (cleanSection.length === 0) continue;
+
+        // Split section by sentence terminators (. ! ?)
+        const sentenceMatches = cleanSection.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [cleanSection];
+        let currentChunk = '';
+        let currentWordCount = 0;
+
+        for (const sentence of sentenceMatches) {
+          const trimmedSentence = sentence.trim();
+          if (!trimmedSentence) continue;
+          const wordsInSentence = trimmedSentence.split(/\s+/).filter(Boolean).length;
+
+          // If adding this sentence keeps chunk under ~44 words or chunk is empty, accumulate
+          if (currentWordCount === 0 || (currentWordCount + wordsInSentence <= 44)) {
+            currentChunk = currentChunk ? `${currentChunk} ${trimmedSentence}` : trimmedSentence;
+            currentWordCount += wordsInSentence;
+          } else {
+            // Push completed chunk and start new one
+            sceneChunks.push(currentChunk.trim());
+            currentChunk = trimmedSentence;
+            currentWordCount = wordsInSentence;
+          }
+        }
+        if (currentChunk.trim()) {
+          sceneChunks.push(currentChunk.trim());
+        }
+      }
+
+      // Fallback: If chunks are too few (e.g. text lacked punctuation), ensure granular division
+      if (sceneChunks.length < 15 && scriptContent.full_text) {
+        const allWords = scriptContent.full_text.split(/\s+/).filter(Boolean);
+        if (allWords.length >= 200) {
+          sceneChunks.length = 0;
+          const wordsPerChunk = Math.max(25, Math.min(40, Math.floor(allWords.length / 25)));
+          for (let i = 0; i < allWords.length; i += wordsPerChunk) {
+            sceneChunks.push(allWords.slice(i, i + wordsPerChunk).join(' '));
+          }
+        }
+      }
+
+      const totalScenes = Math.max(10, sceneChunks.length);
 
       for (let i = 0; i < totalScenes; i++) {
-        let text = rawSections[i] || scriptContent.sections?.[i] || `Exposition of ${book} Chapter ${ch}, movement ${i + 1}.`;
+        let text = sceneChunks[i] || `Exposition of ${book} Chapter ${ch}, movement ${i + 1}.`;
+
+        // Ensure opening hook begins with channel identity if first scene
         if (i === 0 && !text.toLowerCase().includes('bybiblewisdom')) {
           text = `Welcome to ByBibleWisdom. Today, we step into the sacred words of ${book} Chapter ${ch}. ${text}`.trim();
         } else if (i === totalScenes - 1 && (!text.toLowerCase().includes('subscribe') || !text.toLowerCase().includes('amen'))) {
           text = `${text} May the peace and grace of God guard your heart. If this message blessed your soul today, subscribe to ByBibleWisdom, share this light with someone in need, and leave your prayer or Amen in the comments below. God bless you.`.trim();
         }
-        const visual = visualThemes[i];
+
+        const sceneWords = text.split(/\s+/).filter(Boolean).length;
+        // Paced duration between 10 and 22 seconds per visual cut
+        const sceneDur = Math.max(10, Math.min(22, Math.round(sceneWords / 2.3) || 14));
         const motion = motions[i % motions.length];
+
+        // Generate context-aware cinematic visual prompt for this specific scene
+        const visual = this.generateContextualVisualPrompt(text, book, ch, i, totalScenes, aspect);
 
         segmentsData.push({
           order: i + 1,
@@ -1671,6 +1680,92 @@ Return as JSON:
       db.exec('ROLLBACK');
       throw err;
     }
+  }
+
+  /**
+   * Generates authentic, context-aware visual prompts based on the spoken narration
+   */
+  generateContextualVisualPrompt(text, book, ch, index, totalScenes, aspect) {
+    const t = (text || '').toLowerCase();
+    const isFirst = (index === 0);
+    const isLast = (index === totalScenes - 1);
+
+    if (isFirst) {
+      return `Cinematic peaceful prologue of ancient Near Eastern landscape at dawn, celestial golden sunbeams piercing morning mist over mountains of biblical antiquity, 8k, museum quality, ${aspect}, no text, no watermark`;
+    }
+
+    if (isLast) {
+      return `Closing cinematic shot of an ancient open Holy Bible resting on olive wood in a quiet stone sanctuary, warm golden sunbeam illuminating the holy pages, peaceful reverence, ${aspect}, no text, no watermark`;
+    }
+
+    // Context-sensitive prompt selection based on keywords in narration
+    if (/(jesus|christ|savior|messiah|lord|gospel|disciple|healing|miracle|beatitude|sermon on the mount|resurrection|parable)/i.test(t)) {
+      if (/(water|sea|waves|storm|boat|lake|galilee)/i.test(t)) {
+        return `Reverent 1st-century portrayal of Jesus walking upon the tranquil waters of the Sea of Galilee at dawn, celestial soft mist, peaceful authority, cinematic documentary, ${aspect}, no text, no watermark`;
+      }
+      if (/(shepherd|sheep|flock|pasture)/i.test(t)) {
+        return `Jesus as the Good Shepherd in radiant green pastoral hills, holding gentle lamb, warm golden hour sun, serene peace, ${aspect}, no text, no watermark`;
+      }
+      if (/(heal|healing|touch|mercy|blind|lame|sick|compassion)/i.test(t)) {
+        return `Jesus Christ extending hands of compassion and healing, radiant celestial light of divine mercy, 1st-century historical setting, ${aspect}, no text, no watermark`;
+      }
+      if (/(pray|prayer|kneel|garden|gethsemane|supplication)/i.test(t)) {
+        return `Jesus Christ in reverent prayer in the Garden of Gethsemane under ancient olive trees, soft moonlight and celestial peace, ${aspect}, no text, no watermark`;
+      }
+      if (/(bread|wine|supper|table|cup|communion|covenant)/i.test(t)) {
+        return `Sacred portrayal of the Last Supper table with unleavened bread and covenant chalice in candlelight, warm reverent stillness, ${aspect}, no text, no watermark`;
+      }
+      return `Reverent 1st-century portrayal of Jesus Christ teaching with compassion, authentic linen robes, radiant soft celestial glow, cinematic documentary, ${aspect}, no text, no watermark`;
+    }
+
+    if (/(moses|sinai|mountain|golden calf|aaron|tablets|stone|commandment|wilderness|desert|exodus)/i.test(t)) {
+      if (/(golden calf|idol|earring|dance|altar)/i.test(t)) {
+        return `Historical Near Eastern archaeological scene in desert encampment beneath towering peaks of Mount Sinai, ancient Hebrew tents under dramatic twilight, archaeological fidelity, ${aspect}, no text, no watermark`;
+      }
+      if (/(tablets|stone|commandment|finger of god|testimony)/i.test(t)) {
+        return `Macro cinematic shot of ancient carved stone tablets bearing paleo-Hebrew inscriptions, resting upon Sinai granite in radiant golden sunrise, ${aspect}, no text, no watermark`;
+      }
+      if (/(cloud|glory|fire|presence|descend|glory cloud)/i.test(t)) {
+        return `Awe-inspiring view of Mount Sinai crowned with divine glory cloud and piercing golden light rays, epic biblical cinematography, ${aspect}, no text, no watermark`;
+      }
+      return `Cinematic view of the vast Sinai wilderness at sunrise, rugged desert canyons and red granite mountains under peaceful morning sky, ${aspect}, no text, no watermark`;
+    }
+
+    if (/(temple|sanctuary|ark|altar|incense|tabernacle|priest|holy of holies)/i.test(t)) {
+      return `Sacred ancient stone sanctuary with monumental carved arches, golden altar with fragrant incense rising into celestial sunbeams, museum quality, ${aspect}, no text, no watermark`;
+    }
+
+    if (/(scroll|manuscript|parchment|torah|qumran|dead sea|scribe|ink|pen|word of god|scripture)/i.test(t)) {
+      return `Macro cinematic close-up of open ancient Hebrew parchment scroll with weathered ink calligraphy, illuminated by warm lantern glow on cedar table, ${aspect}, no text, no watermark`;
+    }
+
+    if (/(shepherd|sheep|pasture|green pastures|still waters|meadow|flock)/i.test(t)) {
+      return `Tranquil green pastures of ancient Judea with gentle sheep grazing along still waters at sunrise, peaceful pastoral harmony, ${aspect}, no text, no watermark`;
+    }
+
+    if (/(creation|heavens|earth|waters|ocean|sky|firmament|stars|sun|moon|beginning|bara)/i.test(t)) {
+      return `Majestic panoramic view of primordial earth and radiant celestial dawn, gold light piercing clouds over ancient mountains and oceans, 8k, ${aspect}, no text, no watermark`;
+    }
+
+    if (/(pray|prayer|peace|soul|heart|grace|faith|trust|comfort|hope|amen)/i.test(t)) {
+      return `A solitary believer in peaceful contemplative prayer on a mountain ridge overlooking ancient Jerusalem valley at sunrise, warm golden rim lighting, profound serene stillness, ${aspect}, no text, no watermark`;
+    }
+
+    if (/(archaeolog|cave|ruins|artifacts|seal|excavat)/i.test(t)) {
+      return `Archaeological excavation inside Dead Sea Qumran caves, ancient earthenware jars containing weathered biblical manuscripts, cinematic documentary, ${aspect}, no text, no watermark`;
+    }
+
+    // Default authentic Near East biblical theme cycling
+    const genericThemes = [
+      `Cinematic atmospheric landscape of ancient Near East during biblical times, peaceful nomadic caravan traversing majestic valley at golden hour, ${aspect}, no text, no watermark`,
+      `Sacred ancient library alcove, weathered scrolls of the biblical canon on cedar wood table, candlelight, peaceful reverent study, ${aspect}, no text, no watermark`,
+      `Dramatic biblical scene of God's sovereign covenant, peaceful clouds parting over mountain sanctuary with divine golden light, ${aspect}, no text, no watermark`,
+      `Awe-inspiring view of sacred desert oasis under starry night sky, quiet contemplation of divine deliverance, ${aspect}, no text, no watermark`,
+      `Crimson sunrise over the mountains of Judea, prophetic radiance breaking through morning mist, epic documentary cinematography, ${aspect}, no text, no watermark`,
+      `Ancient olive grove on rolling Judean hills, weathered gnarly olive trees bathed in warm golden afternoon sunlight, peaceful Sabbath stillness, ${aspect}, no text, no watermark`
+    ];
+
+    return genericThemes[index % genericThemes.length];
   }
 }
 

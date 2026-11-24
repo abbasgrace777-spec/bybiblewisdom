@@ -25,6 +25,14 @@ app.use('/data', express.static(path.join(config.PATHS.ROOT, 'data')));
 // Register API routes
 app.use('/api', apiRoutes);
 
+// Health check endpoints for immediate uptime confirmation
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', server: 'online', time: new Date().toISOString() });
+});
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', server: 'online', time: new Date().toISOString() });
+});
+
 // Serve Frontend production build if available
 const frontendDist = path.join(config.PATHS.FRONTEND, 'dist');
 if (fs.existsSync(frontendDist)) {
@@ -37,12 +45,16 @@ if (fs.existsSync(frontendDist)) {
   });
 } else {
   app.get('/', (req, res) => {
+    // If a web browser accesses the API port directly, seamlessly redirect to Frontend UI
+    if (req.accepts('html')) {
+      return res.redirect(`http://localhost:${config.CLIENT_PORT || 3000}`);
+    }
     res.json({
       app: 'ByBibleWisdom AI Studio API',
       channel: 'https://www.youtube.com/@ByBibleWisdom',
       status: 'ONLINE',
       version: '1.0.0',
-      frontend: 'Frontend dist not built. Run "npm run build" in frontend or start vite dev server.'
+      frontend: `http://localhost:${config.CLIENT_PORT || 3000}`
     });
   });
 }

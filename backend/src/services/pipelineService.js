@@ -72,15 +72,16 @@ class PipelineService {
 
       // Step 2: Script & Scene Segments Verification
       const existingScript = get(`SELECT * FROM scripts WHERE project_id = ?`, [projectId]);
-      const existingSegments = query(`SELECT id FROM script_segments WHERE project_id = ?`, [projectId]);
+      const existingSegments = query(`SELECT id, duration_seconds FROM script_segments WHERE project_id = ?`, [projectId]);
+      const needsLongFormResegmentation = project.format === 'LONG_FORM' && existingSegments && existingSegments.length > 0 && existingSegments.length < 10;
       let scriptResult;
 
-      if ((isUserCustomScript || existingScript) && existingSegments && existingSegments.length > 0) {
+      if ((isUserCustomScript || existingScript) && existingSegments && existingSegments.length > 0 && !needsLongFormResegmentation) {
         notify(2, 'Using Your Exact Narration Script & Scene Plan (100% Unaltered)', 22);
         scriptResult = { projectId, status: 'APPROVED' };
-      } else if (existingScript && (!existingSegments || existingSegments.length === 0)) {
-        // Script text exists, but scene segments need to be restored
-        notify(2, 'Restoring Scene Segments from Existing Script...', 22);
+      } else if (existingScript && (!existingSegments || existingSegments.length === 0 || needsLongFormResegmentation)) {
+        // Script text exists, but scene segments need to be generated/upgraded to granular visual pacing
+        notify(2, needsLongFormResegmentation ? 'Upgrading Script to Granular Visual Pacing (Max Images)...' : 'Restoring Scene Segments from Existing Script...', 22);
         const scriptContent = {
           hook: existingScript.hook || '',
           biblical_context: existingScript.biblical_context || '',
@@ -89,7 +90,7 @@ class PipelineService {
           practical_application: existingScript.practical_application || '',
           call_to_action: existingScript.call_to_action || '',
           full_text: existingScript.full_narration_text || '',
-          sections: (existingScript.full_narration_text || '').split('\n\n')
+          sections: (existingScript.full_narration_text || '').split(/\n\s*\n/).filter(Boolean)
         };
         const chapterKnowledge = require('./chapterKnowledge');
         const chapterDataObj = chapterKnowledge.getChapterNarrative(project.bible_book || 'Genesis', project.chapter_start || 1);
@@ -106,6 +107,12 @@ class PipelineService {
         scriptResult = await scriptService.generateScriptForProject(projectId, { ...options, scriptType: activeTypeKey }, (cur, total, msg) => {
           notify(2, msg || `Generating Script & Scenes (${typeInfo.shortName})`, 22 + Math.round((cur / total) * 11));
         });
+      }
+
+      // Safety Gate: Guarantee that script segments are safely persisted in database
+      const verifiedSegments = query(`SELECT id FROM script_segments WHERE project_id = ?`, [projectId]);
+      if (!verifiedSegments || verifiedSegments.length === 0) {
+        throw new Error('Scene segmentation could not be verified in database. Please retry production pipeline.');
       }
 
       // Step 3: Quality Control & Safety Gate

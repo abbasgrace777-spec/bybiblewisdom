@@ -263,7 +263,7 @@ class ImageService {
   /**
    * Match an authentic, natural photograph from the library based on scene content keywords (fallback)
    */
-  matchNaturalPhotoForScene(seg, project = {}, isShorts = false) {
+  matchNaturalPhotoForScene(seg, project = {}, isShorts = false, usedPhotos = new Set()) {
     const naturalLibDir = path.join(config.PATHS.ROOT, 'data', 'natural_photo_library', isShorts ? 'vertical' : 'horizontal');
     if (!fs.existsSync(naturalLibDir)) return null;
 
@@ -294,24 +294,35 @@ class ImageService {
       { keywords: ['prayer', 'pray', 'peace', 'soul', 'bless', 'blessing', 'grace', 'overlook', 'mountain'], photo: 'mountain_prayer_overlook.jpg' }
     ];
 
-    // Check keyword match with whole-word boundary
+    // Priority 1: Check keyword match with whole-word boundary, preferring unused photo
     for (const rule of mapping) {
       if (rule.keywords.some(kw => new RegExp(`\\b${kw}\\b`, 'i').test(text))) {
         const candidate = path.join(naturalLibDir, rule.photo);
-        if (fs.existsSync(candidate)) return candidate;
+        if (fs.existsSync(candidate) && !usedPhotos.has(candidate)) {
+          return candidate;
+        }
       }
     }
 
-    // Unique project seed offset so different videos get different diverse natural photos
+    // Priority 2: Unused file rotation with unique project seed
     const projectSeed = (project.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    const idx = (projectSeed + chapter * 5 + order - 1) % availableFiles.length;
-    return path.join(naturalLibDir, availableFiles[idx]);
+    for (let offset = 0; offset < availableFiles.length; offset++) {
+      const idx = (projectSeed + chapter * 5 + (order - 1) * 3 + offset) % availableFiles.length;
+      const candidate = path.join(naturalLibDir, availableFiles[idx]);
+      if (fs.existsSync(candidate) && !usedPhotos.has(candidate)) {
+        return candidate;
+      }
+    }
+
+    // Fallback if all photos used
+    const defaultIdx = (projectSeed + chapter * 5 + order - 1) % availableFiles.length;
+    return path.join(naturalLibDir, availableFiles[defaultIdx]);
   }
 
   /**
-   * Match classical biblical fine art from library with unique project seed
+   * Match classical biblical fine art from library with unique project seed and unused photo preference
    */
-  matchFineArtForScene(seg, project = {}, isShorts = false) {
+  matchFineArtForScene(seg, project = {}, isShorts = false, usedPhotos = new Set()) {
     const fineArtDir = path.join(config.PATHS.ROOT, 'data', 'fine_art_library', isShorts ? 'vertical' : 'horizontal');
     if (!fs.existsSync(fineArtDir)) return null;
 
@@ -321,8 +332,18 @@ class ImageService {
     const chapter = project.chapter_start || 1;
     const order = seg.segment_order || 1;
     const projectSeed = (project.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    const idx = (projectSeed + chapter * 7 + order - 1) % availableFiles.length;
-    return path.join(fineArtDir, availableFiles[idx]);
+
+    // Prefer unused fine art first
+    for (let offset = 0; offset < availableFiles.length; offset++) {
+      const idx = (projectSeed + chapter * 7 + (order - 1) * 2 + offset) % availableFiles.length;
+      const candidate = path.join(fineArtDir, availableFiles[idx]);
+      if (fs.existsSync(candidate) && !usedPhotos.has(candidate)) {
+        return candidate;
+      }
+    }
+
+    const defaultIdx = (projectSeed + chapter * 7 + order - 1) % availableFiles.length;
+    return path.join(fineArtDir, availableFiles[defaultIdx]);
   }
 
   /**
@@ -411,7 +432,12 @@ class ImageService {
       throw new Error('No script segments found. Generate script and scenes before image production.');
     }
 
-    const providerMode = options.providerMode || this.getImageProviderMode();
+    let providerMode = options.providerMode || this.getImageProviderMode();
+    const geminiApiKey = (get(`SELECT value FROM settings WHERE key = 'GEMINI_API_KEY'`)?.value) || process.env.GEMINI_API_KEY || config.AI.GEMINI_API_KEY || '';
+    if (providerMode === 'GEMINI_IMAGEN' && (!geminiApiKey || (!options.confirmPaidCharges && options.confirmPaidCharges !== 'true'))) {
+      console.log(`[ImageService] Gemini Imagen key not configured or confirmation omitted. Gracefully utilizing authentic sacred artwork library (Mode B)...`);
+      providerMode = 'MANUAL_IMPORT';
+    }
     const isShorts = project.format === 'SHORTS';
     const projectImgDir = path.join(config.PATHS.PROJECTS, projectId, 'images');
     if (!fs.existsSync(projectImgDir)) fs.mkdirSync(projectImgDir, { recursive: true });
@@ -504,13 +530,26 @@ class ImageService {
           let selectedPhotoPath = null;
           let engineLabel = 'Authentic Jesus Imagery';
 
+          // If pool tracking is nearly full, clear it so long videos (30-50+ scenes) cycle without starvation
+          if (usedPhotosInProject.size >= 32) {
+            usedPhotosInProject.clear();
+          }
+
           if (useJesusLibrary) {
             selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts, usedPhotosInProject);
             engineLabel = 'Authentic Jesus Imagery';
+            if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
+              selectedPhotoPath = this.matchFineArtForScene(seg, project, isShorts, usedPhotosInProject);
+              engineLabel = 'Classical Biblical Fine Art';
+            }
           } else {
             // Narrative Scene: Prioritize Classical Biblical Fine Art
-            selectedPhotoPath = this.matchFineArtForScene(seg, project, isShorts);
+            selectedPhotoPath = this.matchFineArtForScene(seg, project, isShorts, usedPhotosInProject);
             engineLabel = 'Classical Biblical Fine Art';
+            if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
+              selectedPhotoPath = this.matchNaturalPhotoForScene(seg, project, isShorts, usedPhotosInProject);
+              engineLabel = 'Authentic Biblical Archaeology & Nature';
+            }
             if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
               selectedPhotoPath = this.matchJesusPhotoForScene(seg, project, isShorts, usedPhotosInProject);
               engineLabel = 'Authentic Jesus Imagery';
@@ -519,7 +558,7 @@ class ImageService {
 
           // Fallback to verified biblical nature/archaeology (strictly zero modern elements)
           if (!selectedPhotoPath || !fs.existsSync(selectedPhotoPath)) {
-            selectedPhotoPath = this.matchNaturalPhotoForScene(seg, project, isShorts);
+            selectedPhotoPath = this.matchNaturalPhotoForScene(seg, project, isShorts, usedPhotosInProject);
             engineLabel = 'Authentic Biblical Archaeology & Nature';
           }
 
