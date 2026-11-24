@@ -503,7 +503,12 @@ class IdeogramService {
 
           if (!response.ok) {
             const errText = await response.text();
-            throw new Error(`Ideogram API HTTP ${response.status}: ${errText.slice(0, 200)}`);
+            let parsedErr = errText;
+            try {
+              const j = JSON.parse(errText);
+              if (j.error) parsedErr = j.error;
+            } catch (_) {}
+            throw new Error(`Ideogram API HTTP ${response.status}: ${parsedErr.slice(0, 200)}`);
           }
 
           const result = await response.json();
@@ -559,11 +564,17 @@ class IdeogramService {
     // Check if at least one variant succeeded
     const anySuccess = generatedVariants.some(v => v.available);
     if (!anySuccess) {
+      const firstErr = generatedVariants[0]?.error || '';
+      const isCreditIssue = firstErr.includes('402') || firstErr.includes('insufficient_funds') || firstErr.includes('credits');
+      const errorMsg = isCreditIssue
+        ? 'Ideogram API requires paid developer credits. Add credits at https://ideogram.ai/platform or use Ready-to-Copy Prompts / Canvas Typography.'
+        : `All Ideogram API generation attempts failed: ${firstErr}. Check API key and account credits.`;
+
       return {
         success: false,
         status: 'FAILED',
         engine: 'Ideogram 2.0 API (Official)',
-        error: `All Ideogram API generation attempts failed. Check API key and account credits. Zero fallback images produced.`,
+        error: errorMsg,
         variants: generatedVariants
       };
     }
@@ -768,6 +779,64 @@ class IdeogramService {
     fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2), 'utf8');
 
     return this.getThumbnailData(projectId);
+  }
+
+  /**
+   * Test connection to Ideogram API using the configured or provided key.
+   * Calls the official v2 account api-keys endpoint.
+   */
+  async testIdeogramConnection(customKey) {
+    const apiKeyRow = get(`SELECT value FROM settings WHERE key = 'IDEOGRAM_API_KEY'`);
+    const apiKey = (customKey && customKey.trim()) || (apiKeyRow && apiKeyRow.value) || process.env.IDEOGRAM_API_KEY || '';
+
+    if (!apiKey || apiKey.trim().length < 5) {
+      return {
+        connected: false,
+        error: 'Ideogram API Key is not configured. Please add your key in Settings or .env.'
+      };
+    }
+
+    try {
+      const response = await fetch('https://api.ideogram.ai/v2/account/api-keys', {
+        headers: {
+          'Api-Key': apiKey.trim()
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const activeKey = data.api_keys?.find(k => k.status === 'active') || data.api_keys?.[0];
+        const label = activeKey?.label || 'Active Key';
+        const redactedKey = activeKey?.redacted_api_key || `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`;
+        return {
+          connected: true,
+          status: 'ACTIVE',
+          credits: 'Account Connected (Manage on ideogram.ai/platform)',
+          message: `Ideogram 2.0 API Connected! Key: "${label}" (${redactedKey}) is Active.`,
+          label,
+          redactedKey,
+          apiKeysCount: data.api_keys?.length || 1
+        };
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        return {
+          connected: false,
+          error: `Authentication failed (HTTP ${response.status}). Please check that your Ideogram API key is correct.`
+        };
+      }
+
+      const errText = await response.text();
+      return {
+        connected: false,
+        error: `Ideogram API returned HTTP ${response.status}: ${errText.slice(0, 150)}`
+      };
+    } catch (err) {
+      return {
+        connected: false,
+        error: `Network error connecting to Ideogram API: ${err.message}`
+      };
+    }
   }
 }
 

@@ -1345,23 +1345,7 @@ router.post('/projects/:id/seo/generate', (req, res) => {
   }
 });
 
-router.post('/settings/test-gemini', async (req, res) => {
-  try {
-    const result = await imageService.testGeminiConnection(req.body.geminiApiKey);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
 
-router.post('/settings/test-ideogram', async (req, res) => {
-  try {
-    const result = await ideogramService.testIdeogramConnection(req.body.ideogramApiKey);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
 
 // --- 18. Christian Content Categories Hub (12 Categories) ---
 router.get('/categories', (req, res) => {
