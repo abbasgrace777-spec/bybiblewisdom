@@ -136,9 +136,14 @@ class CleanupService {
     const tempDir = path.join(storageDir, 'temp');
     const byBibleDir = path.join(config.PATHS.ROOT, 'ByBibleWisdom');
 
-    console.log(`[CleanupService] Starting cleanup with retention: ${retentionDays} days (cutoff: ${new Date(cutoffTime).toISOString()})...`);
+    console.log(`[CleanupService] Starting targeted automation-only cleanup (Retention: ${retentionDays} days, cutoff: ${new Date(cutoffTime).toISOString()})...`);
 
-    // 1. Clean storage/temp (older than 2 days)
+    // STRICT SAFETY GUARD: Protected assets that are NEVER touched:
+    // - D:\bible\data\ (Jesus Photo Library, Fine Art, Natural Art, Audio Library, Bible Texts, SQLite DB)
+    // - D:\bible\backend\, frontend\, remotion\ (Codebase)
+    // - User manual uploads and ready packages are preserved
+
+    // 1. Clean storage/temp (Automation temporary render cache older than 5 days)
     if (fs.existsSync(tempDir)) {
       try {
         const tempItems = fs.readdirSync(tempDir);
@@ -146,7 +151,7 @@ class CleanupService {
           const itemPath = path.join(tempDir, item);
           try {
             const stat = fs.statSync(itemPath);
-            if (stat.mtimeMs < tempCutoffTime) {
+            if (stat.mtimeMs < cutoffTime) {
               if (stat.isDirectory()) {
                 totalBytesFreed += this.safeDeleteDir(itemPath);
                 dirsDeleted++;
@@ -162,7 +167,7 @@ class CleanupService {
       }
     }
 
-    // 2. Clean storage/projects (raw intermediate render files older than retentionDays)
+    // 2. Clean storage/projects (ONLY automation-generated intermediate render clips & raw WAVs older than 5 days)
     if (fs.existsSync(projectsDir)) {
       try {
         const projDirs = fs.readdirSync(projectsDir);
@@ -172,29 +177,30 @@ class CleanupService {
             const stat = fs.statSync(pPath);
             if (!stat.isDirectory()) continue;
 
-            // Clean audit folders older than retentionDays
+            // Automation pipeline audit folders older than 5 days
             if (pName.startsWith('audit_') && stat.mtimeMs < cutoffTime) {
               totalBytesFreed += this.safeDeleteDir(pPath);
               dirsDeleted++;
               continue;
             }
 
-            // For project folders older than retentionDays:
+            // Inside automated project folders older than 5 days:
             if (stat.mtimeMs < cutoffTime) {
-              // Delete heavy intermediate folders: clips, audio scene cuts, wav files, intermediate mp4s
+              // ONLY delete heavy automation intermediate clips (clips/scene_*.mp4)
               const clipsDir = path.join(pPath, 'clips');
               if (fs.existsSync(clipsDir)) {
                 totalBytesFreed += this.safeDeleteDir(clipsDir);
                 dirsDeleted++;
               }
 
+              // ONLY delete automation QC test frames (qc_frames/)
               const qcDir = path.join(pPath, 'qc_frames');
               if (fs.existsSync(qcDir)) {
                 totalBytesFreed += this.safeDeleteDir(qcDir);
                 dirsDeleted++;
               }
 
-              // In output: delete heavy WAV files and redundant intermediate mp4s
+              // In output/: delete heavy uncompressed WAVs and temporary video chunks
               const outDir = path.join(pPath, 'output');
               if (fs.existsSync(outDir)) {
                 const outFiles = fs.readdirSync(outDir);
@@ -207,7 +213,7 @@ class CleanupService {
                 }
               }
 
-              // In audio: delete intermediate scene_* cuts and wavs
+              // In audio/: delete intermediate automated scene audio cuts (scene_1, scene_2...)
               const audioDir = path.join(pPath, 'audio');
               if (fs.existsSync(audioDir)) {
                 const audioItems = fs.readdirSync(audioDir);
