@@ -47,10 +47,19 @@ export default function ImageStudioView({ setActiveTab }) {
   async function fetchProjectScenes(projectId) {
     if (!projectId) return;
     try {
-      const res = await fetch(`/api/projects/${projectId}/details`);
+      // Fetch project details and segments
+      const res = await fetch(`/api/projects/${projectId}`);
       if (res.ok) {
         const data = await res.json();
-        const segs = data.data?.segments || [];
+        let segs = data.data?.segments || data.segments || [];
+        // Secondary fallback to dedicated segments endpoint if needed
+        if (!segs || segs.length === 0) {
+          const segRes = await fetch(`/api/projects/${projectId}/segments`);
+          if (segRes.ok) {
+            const segData = await segRes.json();
+            segs = segData.data || segData || [];
+          }
+        }
         setScenes(segs);
       }
     } catch (e) {
@@ -193,11 +202,20 @@ export default function ImageStudioView({ setActiveTab }) {
 
       {/* Mode C Warning Banner if active */}
       {providerMode === 'NONE' && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>
-            <strong>Mode C Active:</strong> No image provider is configured. Production is halted at the visual stage. Zero procedural placeholder fallbacks will be generated. Switch to Mode B or Mode A to continue.
-          </span>
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+            <span>
+              <strong>Mode C Active:</strong> No image provider is configured. Production is halted at the visual stage.
+            </span>
+          </div>
+          <button
+            onClick={() => handleProviderModeChange('MANUAL_IMPORT')}
+            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5"
+          >
+            <span>Activate Mode B (Zero-Cost Default)</span>
+            <span>&rarr;</span>
+          </button>
         </div>
       )}
 

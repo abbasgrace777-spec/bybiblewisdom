@@ -137,7 +137,7 @@ router.post('/projects/batch', (req, res) => {
   }
 });
 
-router.get('/projects/:id', (req, res) => {
+router.get(['/projects/:id', '/projects/:id/details'], (req, res) => {
   try {
     const project = projectService.getProjectById(req.params.id);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
