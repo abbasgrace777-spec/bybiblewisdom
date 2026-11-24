@@ -4,8 +4,8 @@ const ollamaService = require('./ollamaService');
 
 class AIService {
   constructor() {
-    this.defaultGeminiModel = 'gemini-2.0-flash';
-    this.freeGeminiModels = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    this.defaultGeminiModel = 'gemini-flash-lite-latest';
+    this.freeGeminiModels = ['gemini-flash-lite-latest', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
   }
 
   getOllamaUrl() {
@@ -35,7 +35,7 @@ class AIService {
    * Health & connectivity verification for Google Gemini Free Text API
    * Free tier specs: 15 Requests Per Minute (RPM), 1,500 Requests Per Day (RPD), 1,000,000 Tokens Per Minute (TPM).
    */
-  async testGeminiTextConnection(apiKey, model = 'gemini-2.0-flash') {
+  async testGeminiTextConnection(apiKey, model = 'gemini-flash-lite-latest') {
     const key = (apiKey && apiKey.trim()) || this.getGeminiKey();
     if (!key) {
       return {
