@@ -27,6 +27,7 @@ import ReadyToUploadView from './views/ReadyToUploadView';
 import AnalyticsView from './views/AnalyticsView';
 import SettingsView from './views/SettingsView';
 import CreateVideoView from './views/CreateVideoView';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import { api } from './services/api';
 
@@ -122,6 +123,7 @@ export default function App() {
 
         {/* Scrollable Content View */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+          <ErrorBoundary key={activeTab} onNavigateHome={() => setActiveTab('dashboard')}>
           {activeTab === 'dashboard' && (
             <DashboardView
               stats={stats}
@@ -259,6 +261,7 @@ export default function App() {
           {activeTab === 'settings' && (
             <SettingsView />
           )}
+          </ErrorBoundary>
         </main>
       </div>
 

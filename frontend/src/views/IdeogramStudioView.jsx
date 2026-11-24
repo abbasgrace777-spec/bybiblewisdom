@@ -531,22 +531,29 @@ export default function IdeogramStudioView({ setActiveTab }) {
               <div className="space-y-1.5">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Composition Presets:</span>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {thumbnailData.promptVariations.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => {
-                        setSelectedPreset(v.id);
-                        setCustomPrompt(v.prompt);
-                      }}
-                      className={`p-2 rounded-lg border text-[10px] font-semibold text-center transition-all ${
-                        selectedPreset === v.id
-                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-                          : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      {v.name.split(' (')[0]}
-                    </button>
-                  ))}
+                  {thumbnailData.promptVariations.map((v, idx) => {
+                    const presetKey = v.variantNumber || v.id || (idx + 1);
+                    const titleText = v.title || v.name || `Variant ${idx + 1}`;
+                    const label = String(titleText).split(' (')[0].split(':')[1]?.trim() || String(titleText).split(' (')[0];
+                    return (
+                      <button
+                        key={presetKey}
+                        onClick={() => {
+                          setSelectedPreset(presetKey);
+                          if (v.prompt) setCustomPrompt(v.prompt);
+                          if (v.headlineText) setHeadlineText(v.headlineText);
+                        }}
+                        className={`p-2 rounded-lg border text-[10px] font-semibold text-center transition-all truncate ${
+                          selectedPreset === presetKey
+                            ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                            : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200'
+                        }`}
+                        title={titleText}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
