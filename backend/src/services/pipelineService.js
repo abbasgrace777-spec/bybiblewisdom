@@ -70,11 +70,30 @@ class PipelineService {
         await chapterReaderService.readCompleteChapter(book, chapter, project.bible_translation || 'WEB');
       }
 
-      // Step 2: Script (Already provided for Custom Script)
-      const existingScript = get(`SELECT id FROM scripts WHERE project_id = ?`, [projectId]);
+      // Step 2: Script & Scene Segments Verification
+      const existingScript = get(`SELECT * FROM scripts WHERE project_id = ?`, [projectId]);
+      const existingSegments = query(`SELECT id FROM script_segments WHERE project_id = ?`, [projectId]);
       let scriptResult;
-      if (isUserCustomScript || existingScript) {
-        notify(2, 'Using Your Exact Narration Script (100% Unaltered)', 22);
+
+      if ((isUserCustomScript || existingScript) && existingSegments && existingSegments.length > 0) {
+        notify(2, 'Using Your Exact Narration Script & Scene Plan (100% Unaltered)', 22);
+        scriptResult = { projectId, status: 'APPROVED' };
+      } else if (existingScript && (!existingSegments || existingSegments.length === 0)) {
+        // Script text exists, but scene segments need to be restored
+        notify(2, 'Restoring Scene Segments from Existing Script...', 22);
+        const scriptContent = {
+          hook: existingScript.hook || '',
+          biblical_context: existingScript.biblical_context || '',
+          core_narrative: existingScript.core_narrative || '',
+          theological_insight: existingScript.theological_insight || '',
+          practical_application: existingScript.practical_application || '',
+          call_to_action: existingScript.call_to_action || '',
+          full_text: existingScript.full_narration_text || '',
+          sections: (existingScript.full_narration_text || '').split('\n\n')
+        };
+        const chapterKnowledge = require('./chapterKnowledge');
+        const chapterDataObj = chapterKnowledge.getChapterNarrative(project.bible_book || 'Genesis', project.chapter_start || 1);
+        scriptService.generateSceneSegments(projectId, scriptContent, project, chapterDataObj, project.format === 'SHORTS');
         scriptResult = { projectId, status: 'APPROVED' };
       } else if (isCustomPrompt) {
         notify(2, 'Generating Script from Approved Outline & Verified Scripture', 22);
