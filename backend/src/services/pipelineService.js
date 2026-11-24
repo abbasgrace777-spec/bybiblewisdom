@@ -10,7 +10,7 @@ const ideogramService = require('./ideogramService');
 const seoService = require('./seoService');
 const exportService = require('./exportService');
 const qualityControlService = require('./qualityControlService');
-const { get, run } = require('../db/database');
+const { get, query, run } = require('../db/database');
 
 class PipelineService {
   /**

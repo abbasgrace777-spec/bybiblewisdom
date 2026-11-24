@@ -243,9 +243,31 @@ class EditingEngineService {
     const project = get(`SELECT * FROM projects WHERE id = ?`, [projectId]);
     if (!project) throw new Error('Project not found');
 
-    const segments = query(`
+    let segments = query(`
       SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC
     `, [projectId]);
+
+    if (!segments || segments.length === 0) {
+      console.log(`[EditingEngine] No script segments found in DB for ${projectId}. Auto-restoring from script...`);
+      const script = get(`SELECT * FROM scripts WHERE project_id = ? ORDER BY version DESC LIMIT 1`, [projectId]);
+      if (script) {
+        const scriptService = require('./scriptService');
+        const chapterKnowledge = require('./chapterKnowledge');
+        const scriptContent = {
+          hook: script.hook || '',
+          biblical_context: script.biblical_context || '',
+          core_narrative: script.core_narrative || '',
+          theological_insight: script.theological_insight || '',
+          practical_application: script.practical_application || '',
+          call_to_action: script.call_to_action || '',
+          full_text: script.full_narration_text || '',
+          sections: (script.full_narration_text || '').split('\n\n')
+        };
+        const chapterDataObj = chapterKnowledge.getChapterNarrative(project.bible_book || 'Genesis', project.chapter_start || 1);
+        scriptService.generateSceneSegments(projectId, scriptContent, project, chapterDataObj, project.format === 'SHORTS');
+        segments = query(`SELECT * FROM script_segments WHERE project_id = ? ORDER BY segment_order ASC`, [projectId]);
+      }
+    }
 
     if (!segments || segments.length === 0) {
       throw new Error('No script segments found for video editing.');
